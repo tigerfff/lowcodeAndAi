@@ -1,10 +1,14 @@
-export default {
+"use strict";
+
+exports.__esModule = true;
+exports.default = void 0;
+var _default = {
   el: {
     colorpicker: {
       confirm: '确定',
       clear: '清空',
       new_name: '新增',
-      current_name: '当前',
+      current_name: '当前'
     },
     datepicker: {
       now: '此刻',
@@ -53,7 +57,7 @@ export default {
         sep: '九月',
         oct: '十月',
         nov: '十一月',
-        dec: '十二月',
+        dec: '十二月'
       },
       weeks: {
         mon: '一',
@@ -62,22 +66,22 @@ export default {
         thu: '四',
         fri: '五',
         sat: '六',
-        sun: '日',
+        sun: '日'
       },
       dayOrdinal: '{num} 日',
       monthOrdinal: '{num} 月',
-      weekOrdinal: '{num} 周',
+      weekOrdinal: '{num} 周'
     },
     select: {
       loading: '加载中',
       noMatch: '暂无结果',
       noData: '暂无数据',
-      placeholder: '请选择',
+      placeholder: '请选择'
     },
     cascader: {
       noMatch: '暂无结果',
       loading: '加载中',
-      placeholder: '请选择',
+      placeholder: '请选择'
     },
     pagination: {
       goto: '前往',
@@ -86,44 +90,41 @@ export default {
       pageClassifier: '页',
       gotoBtn: '跳转',
       prevMore: '向前{count}页',
-      nextMore: '向后{count}页',
+      nextMore: '向后{count}页'
     },
     messagebox: {
       title: '提示',
       confirm: '确定',
       cancel: '取消',
-      error: '输入的数据不合法!',
+      error: '输入的数据不合法!'
     },
     upload: {
       upload: '上传',
       delete: '删除',
       preview: '查看图片',
-      continue: '继续上传',
+      continue: '继续上传'
     },
     table: {
       emptyText: '暂无数据',
       confirmFilter: '筛选',
       resetFilter: '重置',
       clearFilter: '全部',
-      sumText: '合计',
-      ascendingSorting: '点击升序',
-      descendingSorting: '点击降序',
-      nullSorting: '取消排序',
+      sumText: '合计'
     },
     tree: {
-      emptyText: '暂无数据',
+      emptyText: '暂无数据'
     },
     transfer: {
       noMatch: '暂无结果',
       noData: '暂无数据',
-      titles: ['待选择', '已选择'],
-      clear: '清空',
+      titles: ['列表 1', '列表 2'],
       filterPlaceholder: '请输入搜索内容',
       noCheckedFormat: '共 {total} 项',
-      hasCheckedFormat: '已选 {checked}/{total} 项',
+      hasCheckedFormat: '已选 {checked}/{total} 项'
     },
     autocomplete: {
-      clearHistory: '清空历史',
-    },
-  },
-}
+      clearHistory: '清空历史'
+    }
+  }
+};
+exports.default = _default;

@@ -1,17 +1,17 @@
 <script>
-import CompleteWorkflow from './views/CompleteWorkflow.vue'
+import MainWorkflow from './views/MainWorkflow.vue'
 
 export default {
   name: 'App',
   components: {
-    CompleteWorkflow
+    MainWorkflow
   }
 }
 </script>
 
 <template>
   <div id="app">
-    <CompleteWorkflow />
+    <MainWorkflow />
   </div>
 </template>
 

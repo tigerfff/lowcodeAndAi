@@ -1,10 +1,14 @@
-export default {
+"use strict";
+
+exports.__esModule = true;
+exports.default = void 0;
+var _default = {
   el: {
     colorpicker: {
       confirm: 'OK',
       clear: 'Clear',
       new_name: 'New',
-      current_name: 'Current',
+      current_name: 'Current'
     },
     datepicker: {
       now: 'Now',
@@ -52,7 +56,7 @@ export default {
         sep: 'Sep',
         oct: 'Oct',
         nov: 'Nov',
-        dec: 'Dec',
+        dec: 'Dec'
       },
       weeks: {
         sun: 'Sun',
@@ -61,22 +65,22 @@ export default {
         wed: 'Wed',
         thu: 'Thu',
         fri: 'Fri',
-        sat: 'Sat',
+        sat: 'Sat'
       },
       dayOrdinal: '$o',
       monthOrdinal: '$o',
-      weekOrdinal: '$o',
+      weekOrdinal: '$o'
     },
     select: {
       loading: 'Loading',
       noMatch: 'No matching data',
       noData: 'No data',
-      placeholder: 'Select',
+      placeholder: 'Select'
     },
     cascader: {
       noMatch: 'No matching data',
       loading: 'Loading',
-      placeholder: 'Select',
+      placeholder: 'Select'
     },
     pagination: {
       goto: 'Go to',
@@ -85,44 +89,45 @@ export default {
       pageClassifier: '',
       gotoBtn: 'Go',
       prevMore: 'Forward {count} page',
-      nextMore: 'Backward {count} page',
+      nextMore: 'Backward {count} page'
     },
     messagebox: {
       title: 'Message',
       confirm: 'OK',
       cancel: 'Cancel',
-      error: 'Illegal input',
+      error: 'Illegal input'
     },
     upload: {
       upload: 'Upload',
       delete: 'Delete',
       preview: 'Preview',
-      continue: 'Continue',
+      continue: 'Continue'
     },
     table: {
       emptyText: 'No Data',
       confirmFilter: 'Confirm',
       resetFilter: 'Reset',
       clearFilter: 'All',
-      sumText: 'Sum',
-      ascendingSorting: 'Click to sort ascending',
-      descendingSorting: 'Click to sort descending',
-      nullSorting: 'Click to cancel sorting',
+      sumText: 'Sum'
     },
     tree: {
-      emptyText: 'No Data',
+      emptyText: 'No Data'
     },
     transfer: {
       noMatch: 'No matching data',
       noData: 'No data',
-      titles: ['List 1', 'List 2'], // to be translated
-      clear: 'Clear',
-      filterPlaceholder: 'Enter keyword', // to be translated
-      noCheckedFormat: '{total} items', // to be translated
-      hasCheckedFormat: '{checked}/{total} checked', // to be translated
+      titles: ['List 1', 'List 2'],
+      // to be translated
+      filterPlaceholder: 'Enter keyword',
+      // to be translated
+      noCheckedFormat: '{total} items',
+      // to be translated
+      hasCheckedFormat: '{checked}/{total} checked' // to be translated
+
     },
     autocomplete: {
-      clearHistory: 'clear history',
-    },
-  },
-}
+      clearHistory: 'clear history'
+    }
+  }
+};
+exports.default = _default;
