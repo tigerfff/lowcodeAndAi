@@ -34,21 +34,21 @@
   - [ ] 1.1.1 初始化 Vue3 + Vite 项目，配置 Tailwind 或 Uno（其一）
   - [ ] 1.1.2 目录结构搭建：`src/{components,views,stores,utils,services}`, `templates`, `manifests`, `config`
   - [ ] 1.1.3 配置 ESLint + Prettier + husky/lint-staged；新增 `.env.example`
-- [ ] 1.2 hui 组件元数据（M1 手动提取）
-  - [ ] 1.2.1 定义 `hui-components.schema.json`（name/category/requiredProps/commonProps/events/slots/vModel/备注）
-  - [ ] 1.2.2 从 `hui/h-pagedTable.md` 提取元数据（标注函数式映射要求）
-  - [ ] 1.2.3 提取其余 P0 组件（至少 14 个）并合并到 `manifests/hui-components.json`
-  - [ ] 1.2.4 编写 `scripts/validate-components.js` 脚本并通过校验
-- [ ] 1.3 第一个典型页面模板：standard-list
-  - [ ] 1.3.1 编写 `templates/standard-list/template.json`（layout.fixed, aiTasks, dataflows, componentDefaults）
-  - [ ] 1.3.2 编写 `templates/standard-list/page.vue.hbs`（完整 SFC 模板 + 变量注入点）
-  - [ ] 1.3.3 准备 `templates/standard-list/preview.png`
-  - [ ] 1.3.4 模板完整性校验脚本并通过
+- [x] 1.2 hui 组件元数据（M1 手动提取）
+  - [x] 1.2.1 定义 `hui-components.schema.json`（name/category/requiredProps/commonProps/events/slots/vModel/备注）
+  - [x] 1.2.2 从 `hui/h-pagedTable.md` 提取元数据（标注函数式映射要求）
+  - [x] 1.2.3 提取其余 P0 组件（至少 14 个）并合并到 `manifests/hui-components.json`
+  - [x] 1.2.4 编写 `scripts/validate-components.js` 脚本并通过校验
+- [x] 1.3 第一个典型页面模板：standard-list
+  - [x] 1.3.1 编写 `templates/standard-list/template.json`（layout.fixed, aiTasks, dataflows, componentDefaults）
+  - [x] 1.3.2 编写 `templates/standard-list/page.vue.hbs`（完整 SFC 模板 + 变量注入点）
+  - [x] 1.3.3 准备 `templates/standard-list/README.md`（说明文档）
+  - [x] 1.3.4 模板完整性校验脚本并通过
 
 #### 阶段 2：核心功能开发
 
-- [ ] 2.1 API 选择器与解析
-  - [ ] 2.1.1 API 输入组件（粘贴样例 JSON / URL 上传 OpenAPI）
+- [ ] 2.1 API 选择器与解析（MVP 仅支持粘贴方式）
+  - [ ] 2.1.1 API 输入组件：粘贴响应样例 JSON + 粘贴请求参数示例 JSON
   - [ ] 2.1.2 JSON 解析：递归识别数据数组路径与总数路径（按 dataflows 优先级）
   - [ ] 2.1.3 分页参数识别：从请求参数识别 page/pageSize（支持 current/size 变体）
   - [ ] 2.1.4 UI 展示识别结果并支持手动修正

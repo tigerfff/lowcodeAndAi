@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Page Configuration Schema",
+  "description": "Schema for validating generated page configuration JSON",
+  "type": "object",
+  "required": ["templateId", "pageName", "dataMapping", "columns"],
+  "properties": {
+    "templateId": {
+      "type": "string",
+      "description": "Template identifier",
+      "enum": ["standard-list"]
+    },
+    "pageName": {
+      "type": "string",
+      "description": "Page component name (PascalCase)",
+      "pattern": "^[A-Z][a-zA-Z0-9]*$"
+    },
+    "breadcrumb": {
+      "type": "array",
+      "description": "Breadcrumb navigation items",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "dataMapping": {
+      "type": "object",
+      "description": "API data mapping configuration",
+      "required": ["dataPath", "pageNoField", "pageSizeField"],
+      "properties": {
+        "dataPath": {
+          "type": "string",
+          "description": "Path to data array in response (e.g., 'data.rows')"
+        },
+        "totalPath": {
+          "type": ["string", "null"],
+          "description": "Path to total count in response (e.g., 'data.total')"
+        },
+        "pageNoField": {
+          "type": "string",
+          "description": "Request parameter name for page number"
+        },
+        "pageSizeField": {
+          "type": "string",
+          "description": "Request parameter name for page size"
+        }
+      }
+    },
+    "searchFields": {
+      "type": "array",
+      "description": "Search field configurations",
+      "items": {
+        "type": "object",
+        "required": ["prop", "label", "type"],
+        "properties": {
+          "prop": {
+            "type": "string",
+            "description": "Field property name"
+          },
+          "label": {
+            "type": "string",
+            "description": "Display label"
+          },
+          "type": {
+            "type": "string",
+            "description": "Component type",
+            "enum": ["input", "select", "date", "daterange"]
+          },
+          "options": {
+            "type": "array",
+            "description": "Options for select type",
+            "items": {
+              "type": "object",
+              "required": ["label", "value"],
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": ["string", "number", "boolean"]
+                }
+              }
+            }
+          },
+          "defaultValue": {
+            "description": "Default value",
+            "type": ["string", "number", "boolean", "null"]
+          },
+          "confidence": {
+            "type": "number",
+            "description": "AI inference confidence (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "columns": {
+      "type": "array",
+      "description": "Table column configurations",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["prop", "label"],
+        "properties": {
+          "prop": {
+            "type": "string",
+            "description": "Field property name"
+          },
+          "label": {
+            "type": "string",
+            "description": "Column header label"
+          },
+          "type": {
+            "type": "string",
+            "description": "Column display type",
+            "enum": ["text", "datetime", "tag"],
+            "default": "text"
+          },
+          "width": {
+            "type": "string",
+            "description": "Column width (e.g., '80', '150')"
+          },
+          "mapping": {
+            "type": "object",
+            "description": "Value mapping for tag type",
+            "patternProperties": {
+              ".*": {
+                "type": "object",
+                "required": ["label"],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Display label"
+                  },
+                  "type": {
+                    "type": "string",
+                    "description": "Tag type",
+                    "enum": ["success", "warning", "danger", "info", "primary"]
+                  }
+                }
+              }
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "description": "AI inference confidence (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "description": "Optional API configuration",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["encapsulated", "direct", "todo"]
+        },
+        "modulePath": {
+          "type": "string"
+        },
+        "methodName": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE"]
+        }
+      }
+    }
+  }
+}
+

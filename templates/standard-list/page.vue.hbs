@@ -1,0 +1,239 @@
+<!-- {{description}} -->
+<template>
+  <h-page-container class="{{kebabCase pageName}}">
+    <!-- 面包屑 -->
+    <h-page-header :breadcrumb="breadcrumb" slot="pageHeader" />
+    
+    <h-page-content>
+      {{#if searchFields}}
+      <!-- 搜索条件 -->
+      <h-page-search ref="filters" :model="filters">
+        {{#each searchFields}}
+        <h-page-search-item label="{{label}}" prop="{{prop}}">
+          {{#if (eq type 'input')}}
+          <el-input v-model="filters.{{prop}}" placeholder="{{#if placeholder}}{{placeholder}}{{else}}请输入{{label}}{{/if}}" />
+          {{/if}}
+          {{#if (eq type 'select')}}
+          <el-select v-model="filters.{{prop}}" placeholder="{{#if placeholder}}{{placeholder}}{{else}}请选择{{label}}{{/if}}">
+            <el-option
+              v-for="item in {{#if options.varName}}{{options.varName}}{{else}}{{prop}}Options{{/if}}"
+              :key="item.{{#if options.valueKey}}{{options.valueKey}}{{else}}value{{/if}}"
+              :value="item.{{#if options.valueKey}}{{options.valueKey}}{{else}}value{{/if}}"
+              :label="item.{{#if options.labelKey}}{{options.labelKey}}{{else}}label{{/if}}"
+            />
+          </el-select>
+          {{/if}}
+          {{#if (eq type 'daterange')}}
+          <el-date-picker
+            v-model="filters.{{prop}}"
+            type="daterange"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+          />
+          {{/if}}
+          {{#if (eq type 'date')}}
+          <el-date-picker
+            v-model="filters.{{prop}}"
+            type="date"
+            placeholder="{{#if placeholder}}{{placeholder}}{{else}}请选择{{label}}{{/if}}"
+          />
+          {{/if}}
+          {{#if (eq type 'datetime')}}
+          <el-date-picker
+            v-model="filters.{{prop}}"
+            type="datetime"
+            placeholder="{{#if placeholder}}{{placeholder}}{{else}}请选择{{label}}{{/if}}"
+          />
+          {{/if}}
+        </h-page-search-item>
+        {{/each}}
+        
+        <template slot="pageSearchAction">
+          <el-button type="primary" @click="search">查询</el-button>
+          <el-button @click="reset">重置</el-button>
+        </template>
+      </h-page-search>
+      {{/if}}
+
+      <!-- 表格 -->
+      <h-page-table>
+        <el-table
+          :data="list"
+          stripe
+          show-overflow-title
+        >
+          {{#each columns}}
+          {{#if customRender}}
+          <el-table-column label="{{label}}" {{#if width}}width="{{width}}"{{/if}}>
+            <template v-slot="scope">
+              {{{customRender}}}
+            </template>
+          </el-table-column>
+          {{else}}
+          <el-table-column
+            label="{{label}}"
+            prop="{{prop}}"
+            {{#if width}}width="{{width}}"{{/if}}
+            {{#if formatter}}:formatter="{{formatter}}"{{/if}}
+          />
+          {{/if}}
+          {{/each}}
+          {{#if operationColumn}}
+          <el-table-column label="{{operationColumn.label}}" {{#if operationColumn.width}}width="{{operationColumn.width}}"{{/if}} {{#if operationColumn.fixed}}fixed="{{operationColumn.fixed}}"{{/if}}>
+            <template v-slot="scope">
+              {{#each operationColumn.buttons}}
+              <span class="opt_text" @click="{{action}}(scope.row)">{{label}}</span>
+              {{/each}}
+            </template>
+          </el-table-column>
+          {{/if}}
+        </el-table>
+        
+        <!-- 分页器 -->
+        <el-pagination
+          slot="pagination"
+          :current-page.sync="pagination.{{dataMapping.pageNoField}}"
+          :page-sizes="pagination.pageSizes"
+          :page-size="pagination.{{dataMapping.pageSizeField}}"
+          :total="pagination.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="onSizeChange"
+          @current-change="onPageChange"
+        />
+      </h-page-table>
+    </h-page-content>
+  </h-page-container>
+</template>
+
+<script>
+{{#if api.importPath}}
+import api from '{{api.importPath}}'
+{{/if}}
+
+export default {
+  name: '{{pascalCase pageName}}',
+  data() {
+    return {
+      breadcrumb: {{{json breadcrumb}}},
+      {{#if hasSelectOptions}}
+      // 下拉选项数据
+      {{#each selectOptions}}
+      {{varName}}: {{{json options}}},
+      {{/each}}
+      {{/if}}
+      {{#if searchFields}}
+      filters: {
+        {{#each searchFields}}
+        {{prop}}: {{{json defaultValue}}}{{#unless @last}},{{/unless}}
+        {{/each}}
+      },
+      {{/if}}
+      list: [],
+      pagination: {
+        {{dataMapping.pageNoField}}: 1,
+        total: 0,
+        {{dataMapping.pageSizeField}}: 20,
+        pageSizes: [10, 20, 50, 100]
+      }
+    }
+  },
+  mounted() {
+    this.search()
+  },
+  methods: {
+    /**
+     * 查询列表数据
+     */
+    async search() {
+      const { {{dataMapping.pageNoField}}, {{dataMapping.pageSizeField}} } = this.pagination
+      
+      const params = {
+        {{#if searchFields}}
+        ...this.filters,
+        {{/if}}
+        {{dataMapping.pageNoField}},
+        {{dataMapping.pageSizeField}}
+      }
+      
+      {{#if api.importPath}}
+      try {
+        const { data } = await api.{{camelCase api.method}}('{{api.url}}', params)
+        {{#if (startsWith dataMapping.dataPath '(json)')}}
+        this.list = {{{dataMapping.dataPath}}} || []
+        {{else}}
+        this.list = data.{{dataMapping.dataPath}} || []
+        {{/if}}
+        {{#if (startsWith dataMapping.totalPath '(json)')}}
+        this.pagination.total = {{{dataMapping.totalPath}}} || 0
+        {{else}}
+        this.pagination.total = data.{{dataMapping.totalPath}} || 0
+        {{/if}}
+      } catch (error) {
+        console.error('查询失败:', error)
+        this.$message.error('查询失败，请稍后重试')
+      }
+      {{else}}
+      // TODO: 调用 API 获取数据
+      // const { data } = await api.{{api.method}}('{{api.url}}', params)
+      // this.list = data{{#if dataMapping.dataPath}}.{{dataMapping.dataPath}}{{/if}} || []
+      // this.pagination.total = data{{#if dataMapping.totalPath}}.{{dataMapping.totalPath}}{{/if}} || 0
+      {{/if}}
+    },
+    
+    {{#if searchFields}}
+    /**
+     * 重置搜索条件
+     */
+    reset() {
+      {{#each searchFields}}
+      this.filters.{{prop}} = {{{json defaultValue}}}
+      {{/each}}
+      this.pagination.{{dataMapping.pageNoField}} = 1
+      this.search()
+    },
+    {{/if}}
+    
+    /**
+     * 页码变化
+     */
+    onPageChange(page) {
+      this.pagination.{{dataMapping.pageNoField}} = page
+      this.search()
+    },
+    
+    /**
+     * 每页数量变化
+     */
+    onSizeChange(size) {
+      this.pagination.{{dataMapping.pageSizeField}} = size
+      this.pagination.{{dataMapping.pageNoField}} = 1
+      this.search()
+    }{{#if operationColumn}}{{#each operationColumn.buttons}},
+    
+    /**
+     * {{label}}
+     */
+    {{action}}(row) {
+      // TODO: 实现{{label}}逻辑
+      console.log('{{action}}:', row)
+    }{{/each}}{{/if}}
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.{{kebabCase pageName}} {
+  // 自定义样式
+}
+
+.opt_text {
+  color: #3860f4;
+  cursor: pointer;
+  margin-right: 12px;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+}
+</style>
+

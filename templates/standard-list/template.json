@@ -1,0 +1,239 @@
+{
+  "id": "standard-list",
+  "label": "标准列表页",
+  "description": "带搜索的表格列表，适用于数据查询、管理场景。包含搜索栏、数据表格和分页器。",
+  "preview": "templates/standard-list/preview.png",
+  "version": "1.0.0",
+  "author": "AI Code Generator",
+  "layout": {
+    "structure": "fixed",
+    "template": "page.vue.hbs",
+    "description": "固定布局结构：容器 → 头部 → 内容（搜索 + 表格 + 分页）",
+    "components": {
+      "root": "h-page-container",
+      "header": "h-page-header",
+      "content": "h-page-content",
+      "search": "h-page-search + h-page-search-item",
+      "table": "h-page-table > el-table > el-table-column",
+      "pagination": "el-pagination"
+    }
+  },
+  "aiTasks": [
+    "从 API 响应推断表格列配置（字段名、显示标签、数据类型、列宽、格式化）",
+    "从 API 请求参数推断搜索字段配置（字段名、控件类型、默认值、选项数据源）",
+    "推断数据路径映射（列表数据路径 dataPath、总数路径 totalPath）",
+    "推断分页参数映射（pageNo/pageSize 或其变体如 current/size、page/limit）",
+    "识别枚举字段并推断下拉选项来源",
+    "识别日期字段并推断日期选择器类型（date/datetime/daterange）",
+    "为低置信度推断项标注 confidence < 0.8"
+  ],
+  "dataflows": {
+    "description": "数据流配置，定义 API 请求/响应的数据映射规则",
+    "pagination": {
+      "description": "分页参数配置，按优先级尝试匹配",
+      "requestParams": {
+        "pageNo": ["pageNo", "current", "page", "pageNum"],
+        "pageSize": ["pageSize", "size", "limit", "pageLimit"]
+      },
+      "defaultValues": {
+        "pageNo": 1,
+        "pageSize": 20
+      }
+    },
+    "response": {
+      "description": "响应数据路径配置，按优先级尝试提取",
+      "dataPath": [
+        "data.rows",
+        "data.items",
+        "data.list",
+        "data.records",
+        "rows",
+        "items",
+        "list",
+        "records",
+        "data"
+      ],
+      "totalPath": [
+        "data.total",
+        "data.totalRecord",
+        "data.totalCount",
+        "total",
+        "totalRecord",
+        "totalCount",
+        "count"
+      ]
+    },
+    "searchFields": {
+      "description": "搜索字段类型映射规则",
+      "typeMapping": {
+        "string": "input",
+        "number": "input",
+        "enum": "select",
+        "boolean": "select",
+        "date": "date-picker",
+        "datetime": "date-picker",
+        "daterange": "date-picker"
+      }
+    }
+  },
+  "componentDefaults": {
+    "h-page-search": {
+      "label-position": "top"
+    },
+    "el-table": {
+      "stripe": true,
+      "show-overflow-title": true
+    },
+    "el-pagination": {
+      "layout": "total, sizes, prev, pager, next, jumper",
+      "page-sizes": [10, 20, 50, 100]
+    }
+  },
+  "configSchema": {
+    "description": "页面配置 JSON Schema，用于验证 AI 输出",
+    "type": "object",
+    "required": ["pageName", "api", "columns", "dataMapping"],
+    "properties": {
+      "pageName": {
+        "type": "string",
+        "description": "页面名称，用于生成组件名"
+      },
+      "description": {
+        "type": "string",
+        "description": "页面描述"
+      },
+      "breadcrumb": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "面包屑路径"
+      },
+      "api": {
+        "type": "object",
+        "required": ["url", "method"],
+        "properties": {
+          "url": { "type": "string" },
+          "method": { "type": "string", "enum": ["GET", "POST", "PUT", "DELETE"] },
+          "importPath": { "type": "string" }
+        }
+      },
+      "searchFields": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["prop", "label", "type"],
+          "properties": {
+            "prop": { "type": "string" },
+            "label": { "type": "string" },
+            "type": { "type": "string", "enum": ["input", "select", "daterange", "date", "datetime"] },
+            "defaultValue": {},
+            "placeholder": { "type": "string" },
+            "options": {
+              "type": "object",
+              "properties": {
+                "static": { "type": "array" },
+                "apiPath": { "type": "string" },
+                "valueKey": { "type": "string" },
+                "labelKey": { "type": "string" }
+              }
+            },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      },
+      "columns": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["prop", "label"],
+          "properties": {
+            "prop": { "type": "string" },
+            "label": { "type": "string" },
+            "width": { "type": ["string", "number"] },
+            "type": { "type": "string", "enum": ["text", "number", "datetime", "date", "tag", "custom"] },
+            "formatter": { "type": "string" },
+            "customRender": { "type": "string" },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      },
+      "dataMapping": {
+        "type": "object",
+        "required": ["dataPath", "totalPath"],
+        "properties": {
+          "dataPath": { "type": "string", "description": "如 'data.rows' 或 '(json) => json.data.rows'" },
+          "totalPath": { "type": "string", "description": "如 'data.total' 或 '(json) => json.data.total'" },
+          "pageNoField": { "type": "string", "default": "pageNo" },
+          "pageSizeField": { "type": "string", "default": "pageSize" }
+        }
+      },
+      "operationColumn": {
+        "type": "object",
+        "description": "操作列配置（可选）",
+        "properties": {
+          "label": { "type": "string", "default": "操作" },
+          "width": { "type": ["string", "number"] },
+          "fixed": { "type": "string", "enum": ["left", "right"] },
+          "buttons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "type": { "type": "string" },
+                "action": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "用户列表",
+      "description": "典型的用户管理列表页",
+      "config": {
+        "pageName": "UserList",
+        "breadcrumb": ["首页", "用户管理", "用户列表"],
+        "api": {
+          "url": "/api/user/list",
+          "method": "POST"
+        },
+        "searchFields": [
+          {
+            "prop": "userName",
+            "label": "用户名",
+            "type": "input",
+            "placeholder": "请输入用户名",
+            "defaultValue": ""
+          },
+          {
+            "prop": "status",
+            "label": "状态",
+            "type": "select",
+            "defaultValue": "",
+            "options": {
+              "static": [
+                { "value": "1", "label": "启用" },
+                { "value": "0", "label": "禁用" }
+              ]
+            }
+          }
+        ],
+        "columns": [
+          { "prop": "userName", "label": "用户名", "width": "150" },
+          { "prop": "phone", "label": "手机号", "width": "120" },
+          { "prop": "email", "label": "邮箱", "width": "200" },
+          { "prop": "createTime", "label": "创建时间", "width": "180", "type": "datetime" }
+        ],
+        "dataMapping": {
+          "dataPath": "data.rows",
+          "totalPath": "data.total",
+          "pageNoField": "pageNo",
+          "pageSizeField": "pageSize"
+        }
+      }
+    }
+  ]
+}
+

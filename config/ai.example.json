@@ -1,36 +1,29 @@
 {
-  "defaultProvider": "openai",
-  "providers": [
-    {
-      "name": "openai",
-      "baseUrl": "https://api.openai.com/v1",
-      "model": "gpt-4o-mini",
-      "requestTimeoutMs": 20000,
-      "retry": {
-        "maxAttempts": 2,
-        "baseDelayMs": 500
-      },
-      "generation": {
-        "temperature": 0.1,
-        "top_p": 1,
-        "max_tokens": 3000
-      }
-    },
-    {
-      "name": "claude",
-      "baseUrl": "https://api.anthropic.com/v1",
-      "model": "claude-3-5-sonnet-20241022",
-      "requestTimeoutMs": 20000,
-      "retry": {
-        "maxAttempts": 2,
-        "baseDelayMs": 500
-      },
-      "generation": {
-        "temperature": 0.1,
-        "top_p": 1,
-        "max_tokens": 3000
-      }
+  "provider": "openai",
+  "openai": {
+    "apiKey": "sk-your-openai-api-key",
+    "baseURL": "https://api.openai.com/v1",
+    "model": "gpt-4o-mini",
+    "temperature": 0.3,
+    "maxTokens": 4000
+  },
+  "anthropic": {
+    "apiKey": "sk-ant-your-anthropic-api-key",
+    "baseURL": "https://api.anthropic.com",
+    "model": "claude-3-5-sonnet-20241022",
+    "temperature": 0.3,
+    "maxTokens": 4000
+  },
+  "custom": {
+    "apiKey": "",
+    "baseURL": "https://your-custom-api-endpoint.com/v1",
+    "model": "custom-model",
+    "temperature": 0.3,
+    "maxTokens": 4000,
+    "headers": {
+      "Authorization": "Bearer {apiKey}"
     }
-  ]
+  },
+  "timeout": 30000,
+  "retries": 2
 }
-
