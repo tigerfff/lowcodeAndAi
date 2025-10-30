@@ -373,10 +373,68 @@ export async function partialInference(field, sample, inferType, options = {}) {
   return extractJSON(response)
 }
 
+/**
+ * 推断页面配置（统一入口函数）
+ * @param {Object} config - 配置对象 { templateId, apiInput, parseResult }
+ * @returns {Promise<Object>} 推断结果 { config, confidence }
+ */
+export async function inferPageConfig(config) {
+  const { templateId, apiInput, parseResult } = config
+  
+  try {
+    // 如果没有解析结果，返回空配置
+    if (!parseResult) {
+      return {
+        config: {
+          templateId: templateId || 'standard-list',
+          pageName: 'GeneratedPage',
+          breadcrumb: ['首页', '列表页'],
+          dataMapping: {},
+          searchFields: [],
+          columns: []
+        },
+        confidence: 0
+      }
+    }
+    
+    // 使用本地推断生成基础配置
+    const inferredConfig = localInference(parseResult, templateId)
+    
+    // 计算整体置信度
+    const confidences = [
+      ...inferredConfig.columns.map(col => col.confidence || 0.8),
+      ...inferredConfig.searchFields.map(field => field.confidence || 0.8)
+    ]
+    const avgConfidence = confidences.length > 0
+      ? confidences.reduce((sum, c) => sum + c, 0) / confidences.length
+      : 0.8
+    
+    return {
+      config: inferredConfig,
+      confidence: avgConfidence
+    }
+  } catch (error) {
+    console.error('Inference error:', error)
+    // 返回空配置
+    return {
+      config: {
+        templateId: templateId || 'standard-list',
+        pageName: 'GeneratedPage',
+        breadcrumb: ['首页', '列表页'],
+        dataMapping: {},
+        searchFields: [],
+        columns: []
+      },
+      confidence: 0
+    }
+  }
+}
+
 export default {
   localInference,
   aiInference,
   correctConfig,
-  partialInference
+  partialInference,
+  inferPageConfig
 }
 
