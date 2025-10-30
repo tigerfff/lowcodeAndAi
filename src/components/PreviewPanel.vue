@@ -50,6 +50,7 @@
 
 <script>
 import { injectSFCToIframe, setupIframeMessageListener, createPreviewURL, buildPreviewHTML } from '@/services/preview-service'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'PreviewPanel',
@@ -162,7 +163,7 @@ export default {
           window.open(url, '_blank')
         } catch (error) {
           console.error('Export error:', error)
-          this.$message.error('导出失败：' + error.message)
+          ElMessage.error('导出失败：' + error.message)
         }
       }
     }

@@ -60,7 +60,7 @@
 import { ref, computed } from 'vue'
 import { useGeneratorStore } from '@/stores/useGeneratorStore'
 import { inferPageConfig } from '@/services/ai-inference'
-import { Message } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'AiInferenceStep',
@@ -89,13 +89,13 @@ export default {
         confidence.value = inferenceResult.confidence || 0
         
         if (confidence.value >= 0.8) {
-          Message.success('AI 推断完成')
+          ElMessage.success('AI 推断完成')
         } else {
-          Message.warning('AI 推断完成，但部分结果可能需要调整')
+          ElMessage.warning('AI 推断完成，但部分结果可能需要调整')
         }
       } catch (error) {
         console.error('AI inference error:', error)
-        Message.error('AI 推断失败：' + error.message)
+        ElMessage.error('AI 推断失败：' + error.message)
       } finally {
         loading.value = false
       }

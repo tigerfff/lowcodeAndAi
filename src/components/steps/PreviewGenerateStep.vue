@@ -54,7 +54,7 @@
 import { computed } from 'vue'
 import { useGeneratorStore } from '@/stores/useGeneratorStore'
 import PreviewPanel from '@/components/PreviewPanel.vue'
-import { Message } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'PreviewGenerateStep',
@@ -75,7 +75,7 @@ export default {
     const handleCopyCode = () => {
       if (generatedCode.value) {
         navigator.clipboard.writeText(generatedCode.value)
-        Message.success('代码已复制到剪贴板')
+        ElMessage.success('代码已复制到剪贴板')
       }
     }
     
@@ -88,7 +88,7 @@ export default {
         a.download = `${store.selectedTemplate?.id || 'page'}.vue`
         a.click()
         URL.revokeObjectURL(url)
-        Message.success('代码已下载')
+        ElMessage.success('代码已下载')
       }
     }
     
