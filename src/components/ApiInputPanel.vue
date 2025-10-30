@@ -10,7 +10,7 @@
         <span class="required">*</span>
         <span>API 响应样例 JSON</span>
         <el-tooltip content="粘贴一个真实的 API 响应 JSON，用于识别数据结构和字段" placement="top">
-          <i class="el-icon-question"></i>
+          ?
         </el-tooltip>
       </div>
       <el-input
@@ -30,11 +30,11 @@
         @blur="handleResponseBlur"
       />
       <div v-if="responseError" class="error-message">
-        <i class="el-icon-warning"></i>
+        ⚠️
         {{ responseError }}
       </div>
       <div v-if="responseValid" class="success-message">
-        <i class="el-icon-success"></i>
+        ✓
         JSON 格式正确
       </div>
     </div>
@@ -43,7 +43,7 @@
       <div class="section-title">
         <span>请求参数示例 JSON（可选）</span>
         <el-tooltip content="粘贴请求参数示例，用于识别分页参数名称（如 page/pageSize）" placement="top">
-          <i class="el-icon-question"></i>
+          ?
         </el-tooltip>
       </div>
       <el-input
@@ -60,11 +60,11 @@
         @blur="handleRequestBlur"
       />
       <div v-if="requestError" class="error-message">
-        <i class="el-icon-warning"></i>
+        ⚠️
         {{ requestError }}
       </div>
       <div v-if="requestValid" class="success-message">
-        <i class="el-icon-success"></i>
+        ✓
         JSON 格式正确
       </div>
     </div>
@@ -77,7 +77,7 @@
         :loading="parsing"
         @click="handleParse"
       >
-        <i class="el-icon-magic-stick"></i>
+        🧙
         解析并推断
       </el-button>
     </div>

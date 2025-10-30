@@ -3,8 +3,7 @@
     <div class="result-header">
       <h3>🔍 解析结果</h3>
       <el-tag v-if="parseResult" type="success" size="small">
-        <i class="el-icon-success"></i>
-        解析成功
+        ✓ 解析成功
       </el-tag>
     </div>
 
@@ -23,7 +22,7 @@
         <div class="section-header">
           <span class="section-title">📊 数据数组路径</span>
           <el-tooltip content="指向响应中包含列表数据的数组字段" placement="top">
-            <i class="el-icon-question"></i>
+            ?
           </el-tooltip>
         </div>
         <div class="path-input-group">
@@ -32,7 +31,7 @@
             placeholder="data.rows"
             @change="handleDataChange"
           >
-            <template slot="prepend">response.</template>
+            <template #prepend>response.</template>
           </el-input>
           <el-button
             v-if="hasDataAlternatives"
@@ -69,7 +68,7 @@
         <div class="section-header">
           <span class="section-title">🔢 总数字段路径</span>
           <el-tooltip content="指向响应中的数据总条数字段" placement="top">
-            <i class="el-icon-question"></i>
+            ?
           </el-tooltip>
         </div>
         <div class="path-input-group">
@@ -78,7 +77,7 @@
             placeholder="data.total"
             @change="handleDataChange"
           >
-            <template slot="prepend">response.</template>
+            <template #prepend>response.</template>
           </el-input>
           <el-button
             v-if="hasTotalAlternatives"
@@ -109,7 +108,7 @@
         <div class="section-header">
           <span class="section-title">📄 分页参数映射</span>
           <el-tooltip content="请求时使用的分页参数字段名" placement="top">
-            <i class="el-icon-question"></i>
+            ?
           </el-tooltip>
         </div>
         <el-row :gutter="16">
@@ -152,15 +151,15 @@
         >
           <el-table-column prop="key" label="字段名" width="150" />
           <el-table-column prop="type" label="类型" width="100">
-            <template slot-scope="scope">
-              <el-tag size="mini" :type="getTypeTagType(scope.row.type)">
-                {{ scope.row.type }}
+            <template #default="{ row }">
+              <el-tag size="mini" :type="getTypeTagType(row.type)">
+                {{ row.type }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="sample" label="样例值">
-            <template slot-scope="scope">
-              <span class="sample-value">{{ formatSampleValue(scope.row.sample) }}</span>
+            <template #default="{ row }">
+              <span class="sample-value">{{ formatSampleValue(row.sample) }}</span>
             </template>
           </el-table-column>
         </el-table>
@@ -182,15 +181,15 @@
         >
           <el-table-column prop="prop" label="字段名" width="150" />
           <el-table-column prop="type" label="组件类型" width="120">
-            <template slot-scope="scope">
+            <template #default="{ row }">
               <el-tag size="mini" type="primary">
-                {{ scope.row.type }}
+                {{ row.type }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="defaultValue" label="默认值">
-            <template slot-scope="scope">
-              <span class="sample-value">{{ formatSampleValue(scope.row.defaultValue) }}</span>
+            <template #default="{ row }">
+              <span class="sample-value">{{ formatSampleValue(row.defaultValue) }}</span>
             </template>
           </el-table-column>
         </el-table>
@@ -200,8 +199,7 @@
       <div class="result-actions">
         <el-button @click="handleReset">重新解析</el-button>
         <el-button type="primary" @click="handleConfirm">
-          <i class="el-icon-check"></i>
-          确认并继续
+          ✓ 确认并继续
         </el-button>
       </div>
     </div>
