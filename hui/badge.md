@@ -1,0 +1,206 @@
+# Badge 标记
+
+## 基础用法
+
+出现在按钮、图标旁的数字或状态标记。
+
+<template>
+  <code-box title="基本用法" description="定义`value`属性，它接受`Number`或者`String`。">
+  <el-badge :value="12" class="item">
+    <el-button size="small">评论</el-button>
+  </el-badge>
+  <el-badge :value="3" class="item">
+    <el-button size="small">回复</el-button>
+  </el-badge>
+  <el-dropdown trigger="click">
+  <span class="el-dropdown-link">
+    点我查看<i class="el-icon-caret-bottom el-icon--right"></i>
+  </span>
+  <el-dropdown-menu slot="dropdown">
+      <el-dropdown-item class="clearfix">
+        评论
+        <el-badge class="mark" :value="12" />
+      </el-dropdown-item>
+      <el-dropdown-item class="clearfix">
+        回复
+        <el-badge class="mark" :value="3"/>
+      </el-dropdown-item>
+    </el-dropdown-menu>
+  </el-dropdown>
+ </code-box>
+</template>
+
+<style>
+  .demo-badge.demo-box .el-dropdown {
+    vertical-align: middle;
+  }
+  .item {
+  margin-top: 10px;
+  margin-right: 40px;
+}
+</style>
+
+```html
+<el-badge :value="12" class="item">
+  <el-button size="small">评论</el-button>
+</el-badge>
+<el-badge :value="3" class="item">
+  <el-button size="small">回复</el-button>
+</el-badge>
+<el-dropdown trigger="click">
+  <span class="el-dropdown-link">
+    点我查看
+    <i class="el-icon-caret-bottom el-icon--right"></i>
+  </span>
+  <el-dropdown-menu slot="dropdown">
+    <el-dropdown-item class="clearfix">
+      评论
+      <el-badge class="mark" :value="12" />
+    </el-dropdown-item>
+    <el-dropdown-item class="clearfix">
+      回复
+      <el-badge class="mark" :value="3" />
+    </el-dropdown-item>
+  </el-dropdown-menu>
+</el-dropdown>
+
+<style>
+  .demo-badge.demo-box .el-dropdown {
+    vertical-align: middle;
+  }
+  .item {
+    margin-top: 10px;
+    margin-right: 40px;
+  }
+</style>
+```
+
+## 最大值
+
+可自定义最大值。在最大值存在的情况下，可以使用 `showTip` 控制鼠标悬停显示具体数值。
+
+<template>
+  <code-box
+    title="最大值"
+    description="由`max`属性定义，它接受一个`Number`，需要注意的是，只有当`value`为`Number`时，它才会生效。回复按钮中，设置了 showTip 为 true ，鼠标悬停时显示具体数值。">
+    <el-badge :value="200" :max="99" :showTip="false" class="item" >
+      <el-button size="small">评论</el-button>
+    </el-badge>
+    <el-badge :value="100" :max="10" :showTip="true" class="item">
+      <el-button size="small">回复</el-button>
+    </el-badge>
+  </code-box>
+</template>
+
+<style>
+.item {
+  margin-top: 10px;
+  margin-right: 40px;
+}
+</style>
+
+```html
+<el-badge :value="200" :max="99" :showTip="false" class="item">
+  <el-button size="small">评论</el-button>
+</el-badge>
+<el-badge :value="100" :max="10" :showTip="true" class="item">
+  <el-button size="small">回复</el-button>
+</el-badge>
+
+<style>
+  .item {
+    margin-top: 10px;
+    margin-right: 40px;
+  }
+</style>
+```
+
+## 自定义内容
+
+可以显示数字以外的文本内容。
+
+<template>
+  <code-box
+    title="自定义内容"
+    description="定义`value`为`String`类型是时可以用于显示自定义文本。">
+    <el-badge value="new" class="item">
+      <el-button size="small">评论</el-button>
+    </el-badge>
+    <el-badge value="hot" class="item">
+      <el-button size="small">回复</el-button>
+    </el-badge>
+  </code-box>
+</template>
+
+<style>
+.item {
+  margin-top: 10px;
+  margin-right: 40px;
+}
+</style>
+
+```html
+<el-badge value="new" class="item">
+  <el-button size="small">评论</el-button>
+</el-badge>
+<el-badge value="hot" class="item">
+  <el-button size="small">回复</el-button>
+</el-badge>
+
+<style>
+  .item {
+    margin-top: 10px;
+    margin-right: 40px;
+  }
+</style>
+```
+
+## 小红点
+
+以红点的形式标注需要关注的内容。
+
+<template>
+  <code-box
+    title="小红点"
+    description="除了数字外，设置`is-dot`属性，它接受一个`Boolean`。">
+    <el-badge is-dot class="item">数据查询</el-badge>
+    <el-badge is-dot class="item">
+      <el-button class="share-button" icon="h-icon-share" type="primary"></el-button>
+    </el-badge>
+  </code-box>
+</template>
+
+<style>
+.item {
+  margin-top: 10px;
+  margin-right: 40px;
+}
+</style>
+
+```html
+<el-badge is-dot class="item">数据查询</el-badge>
+<el-badge is-dot class="item">
+  <el-button
+    class="share-button"
+    icon="h-icon-share"
+    type="primary"
+  ></el-button>
+</el-badge>
+
+<style scoped>
+  .item {
+    margin-top: 10px;
+    margin-right: 40px;
+  }
+</style>
+```
+
+### Attributes
+
+| 参数                         | 说明                                                         | 类型           | 可选值 | 默认值 |
+| ---------------------------- | ------------------------------------------------------------ | -------------- | ------ | ------ |
+| value                        | 显示值                                                       | string, number | —      | —      |
+| max                          | 最大值，超过最大值会显示 '{max}+'，要求 value 是 Number 类型 | number         | —      | —      |
+| showTip <Badge text="2.0+"/> | 鼠标悬停显示具体数值。仅在 max 存在时有效                    | boolean        | -      | false  |
+| is-dot                       | 小圆点                                                       | boolean        | —      | false  |
+| hidden                       | 隐藏 badge                                                   | boolean        | —      | false  |

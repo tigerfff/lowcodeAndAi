@@ -1,0 +1,64 @@
+{
+  "name": "hui",
+  "type": "module",
+  "version": "2.54.3",
+  "description": "",
+  "license": "MIT",
+  "author": "hui group",
+  "main": "./lib/hui.js",
+  "module": "./lib/hui.js",
+  "unpkg": "./lib/hui.umd.js",
+  "exports": {
+    ".": {
+      "import": "./lib/hui.js",
+      "require": "./lib/hui.js"
+    },
+    "./lib/*": "./lib/*",
+    "./lib/locale": {
+      "import": "./lib/locale/index.js",
+      "require": "./lib/locale/index.js"
+    },
+    "./packages/*": "./packages/*"
+  },
+  "files": [
+    "lib",
+    "src",
+    "theme",
+    "packages",
+    "scripts"
+  ],
+  "peerDependencies": {
+    "@vitejs/plugin-vue2": ">=1.1.0",
+    "@vitejs/plugin-vue2-jsx": "^1.0.3",
+    "rollup": ">=2.78.0",
+    "rollup-plugin-scss": ">=3.0.0",
+    "vite": ">=3.1.0",
+    "vue": ">=2.7.0"
+  },
+  "dependencies": {
+    "@hui/components": "^2.50.17",
+    "@hui/theme": "^1.0.0-alpha.2",
+    "@hui/locale": "^1.0.0-alpha.8",
+    "@hui/theme-v2": "^2.52.2",
+    "@hui/utils": "^1.1.0"
+  },
+  "devDependencies": {
+    "async-validator": "1.6.9",
+    "deepmerge": "^1.5.2",
+    "npm-run-all": "^4.1.5",
+    "sass": "^1.33.0",
+    "unplugin-vue-define-options": "^1.1.1"
+  },
+  "scripts": {
+    "build": "npm run build:theme && npm run build:comp",
+    "build:comp": "vite build && vite build --config vite-esm-browser.config.js",
+    "comp:dev": "vite build --watch",
+    "theme:dev": "rollup -c -w",
+    "dev": "run-p dev:comp dev:theme",
+    "dev:comp": "vite build --watch",
+    "dev:theme": "sass --no-source-map --watch --style compressed ../theme-v2/index.scss lib/hui.css",
+    "build:theme": "sass --no-source-map --style=expanded ../theme-v2/index.scss lib/hui.css",
+    "preinstall": "node ./scripts/preinstall.js",
+    "check-update": "node ./scripts/preinstall.js"
+  }
+}

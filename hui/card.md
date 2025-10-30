@@ -1,0 +1,243 @@
+# Card 卡片
+
+## 基本用法
+
+将信息聚合在卡片容器中展示。
+
+<template>
+  <code-box title="基本用法" description="组件包括`header`和`body`部分，`header`部分需要有显式具名 slot 分发，同时也是可选的。">
+  <el-card class="box-card">
+    <div slot="header" class="clearfix">
+      <span style="line-height: 36px;">卡片名称</span>
+      <el-button style="float: right;" type="primary">操作按钮</el-button>
+    </div>
+    <div v-for="o in 4" :key="o" class="text card-item">
+      {{'列表内容 ' + o }}
+    </div>
+  </el-card>
+  </code-box>
+</template>
+
+<script>
+  import dateUtil from 'hui/src/utils/date'
+  export default {
+    data() {
+      return {
+        currentDate: dateUtil.format(new Date(), 'yyyy-MM-dd HH:mm')
+      };
+    }
+  }
+</script>
+
+<style scoped>
+  .text {
+    font-size: 14px;
+  }
+
+  .time {
+    font-size: 13px;
+    color: #999;
+  }
+
+  .bottom {
+    margin-top: 13px;
+    line-height: 12px;
+  }
+
+  .card-item {
+    padding: 18px 0;
+  }
+
+  .button {
+    padding: 0;
+    float: right;
+  }
+
+  .image {
+    width: 100%;
+    display: block;
+  }
+
+  .clearfix {
+    @utils-clearfix;
+  }
+
+  .box-card {
+    width: 480px;
+  }
+</style>
+
+```html
+<el-card class="box-card">
+  <div slot="header" class="clearfix">
+    <span style="line-height: 36px;">卡片名称</span>
+    <el-button style="float: right;" type="primary">操作按钮</el-button>
+  </div>
+  <div v-for="o in 4" :key="o" class="text card-item">
+    {{'列表内容 ' + o }}
+  </div>
+</el-card>
+<script>
+  import dateUtil from 'hui/src/utils/date';
+  export default {
+    data() {
+      return {
+        currentDate: dateUtil.format(new Date(), 'yyyy-MM-dd HH:mm')
+      };
+    }
+  };
+</script>
+```
+
+## 简单卡片
+
+卡片可以只有内容区域。
+
+<template>
+  <code-box title="简单卡片" description="">
+    <el-card class="box-card">
+      <div v-for="o in 4" :key="o" class="text card-item">
+        {{'列表内容 ' + o }}
+      </div>
+    </el-card>
+  </code-box>
+</template>
+
+```html
+<el-card class="box-card">
+  <div v-for="o in 4" :key="o" class="text item">
+    {{'列表内容 ' + o }}
+  </div>
+</el-card>
+```
+
+## 带图片
+
+可配置定义更丰富的内容展示。
+
+<template>
+  <code-box title="带图片用法" description="配置`body-style`属性来自定义`body`部分的`style`，我们还使用了布局组件。">
+    <el-row>
+      <el-col :span="8" v-for="(o, index) in 2" :key="o" :offset="index > 0 ? 2 : 0">
+        <el-card :body-style="{ padding: '0px' }">
+          <img :src="$withBase('/images/hamburger.png')" class="image">
+          <div style="padding: 14px;">
+            <span>好吃的汉堡</span>
+            <div class="bottom clearfix">
+              <time class="time">{{ currentDate }}</time>
+              <el-button type="text" class="button">操作按钮</el-button>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  </code-box>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      currentDate: new Date()
+    };
+  }
+}
+</script>
+
+<style>
+  .time {
+    font-size: 13px;
+    color: #999;
+  }
+  .bottom {
+    margin-top: 13px;
+    line-height: 12px;
+  }
+
+  .button {
+    padding: 0;
+    float: right;
+  }
+
+  .image {
+    width: 100%;
+    display: block;
+  }
+  .clearfix:before,
+  .clearfix:after {
+      display: table;
+      content: "";
+  }
+  .clearfix:after {
+      clear: both
+  }
+</style>
+
+```html
+<el-row>
+  <el-col
+    :span="8"
+    v-for="(o, index) in 2"
+    :key="o"
+    :offset="index > 0 ? 2 : 0"
+  >
+    <el-card :body-style="{ padding: '0px' }">
+      <img :src="$withBase('/images/hamburger.png')" class="image" />
+      <div style="padding: 14px;">
+        <span>好吃的汉堡</span>
+        <div class="bottom clearfix">
+          <time class="time">{{ currentDate }}</time>
+          <el-button type="text" class="button">操作按钮</el-button>
+        </div>
+      </div>
+    </el-card>
+  </el-col>
+</el-row>
+
+<style>
+  .time {
+    font-size: 13px;
+    color: #999;
+  }
+  .bottom {
+    margin-top: 13px;
+    line-height: 12px;
+  }
+
+  .button {
+    padding: 0;
+    float: right;
+  }
+
+  .image {
+    width: 100%;
+    display: block;
+  }
+
+  .clearfix:before,
+  .clearfix:after {
+    display: table;
+    content: '';
+  }
+  .clearfix:after {
+    clear: both;
+  }
+</style>
+
+<script>
+  export default {
+    data() {
+      return {
+        currentDate: new Date()
+      };
+    }
+  };
+</script>
+```
+
+### Attributes
+
+| 参数       | 说明                                           | 类型   | 可选值 | 默认值              |
+| ---------- | ---------------------------------------------- | ------ | ------ | ------------------- |
+| header     | 设置 header，也可以通过 `slot#header` 传入 DOM | string | —      | —                   |
+| body-style | 设置 body 的样式                               | object | —      | { padding: '20px' } |
