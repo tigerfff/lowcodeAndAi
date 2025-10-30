@@ -204,22 +204,24 @@ export const useGeneratorStore = defineStore('generator', {
 
     // 加载可用模板列表
     async loadTemplates() {
-      try {
-        const response = await fetch('/api/templates')
-        this.availableTemplates = await response.json()
-      } catch (error) {
-        console.error('Failed to load templates:', error)
-        // 默认模板
-        this.availableTemplates = [
-          {
-            id: 'standard-list',
-            name: '标准列表页',
-            description: '包含搜索、表格、分页的典型列表页面',
-            category: 'list',
-            icon: '📊'
-          }
-        ]
-      }
+      // MVP 版本：直接使用默认模板
+      this.availableTemplates = [
+        {
+          id: 'standard-list',
+          name: '标准列表页',
+          description: '包含搜索、表格、分页的典型列表页面',
+          category: 'list',
+          icon: '📊'
+        }
+      ]
+      
+      // 未来可以改为从 API 加载
+      // try {
+      //   const response = await fetch('/api/templates')
+      //   this.availableTemplates = await response.json()
+      // } catch (error) {
+      //   console.error('Failed to load templates:', error)
+      // }
     }
   }
 })
