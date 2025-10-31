@@ -1,1 +1,8 @@
-npx lint-staged
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# 可选：GUI 环境兜底 PATH
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# 不依赖全局 npx，优先使用 npm exec
+npm exec --no -- lint-staged || ./node_modules/.bin/lint-staged

@@ -1,15 +1,10 @@
 # Components
 
-可复用的 Vue 组件目录
+新架构的 Vue 组件，待实现。
 
-## 目录结构
-
-```
-components/
-  ├── common/         # 通用组件
-  ├── template/       # 模板选择相关组件
-  ├── api/            # API 选择器组件
-  ├── inference/      # 推断结果展示组件
-  └── preview/        # 代码预览组件
-```
-
+## 主要组件
+- ComponentLibrary.vue - 左侧组件库
+- PreviewPanel.vue - 中间预览区（iframe）
+- ConfigPanel.vue - 右侧配置面板
+- ApiBindingEditor.vue - 接口绑定编辑器
+- CodePreview.vue - 代码预览对话框

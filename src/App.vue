@@ -1,17 +1,15 @@
 <script>
-import MainWorkflow from './views/MainWorkflow.vue'
 
 export default {
   name: 'App',
   components: {
-    MainWorkflow
   }
 }
 </script>
 
 <template>
   <div id="app">
-    <MainWorkflow />
+    111
   </div>
 </template>
 
