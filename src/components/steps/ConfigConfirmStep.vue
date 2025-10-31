@@ -1,11 +1,32 @@
 <template>
   <div class="config-confirm-step">
-    <ConfigConfirmPanel @next="handleNext" @previous="handlePrevious" />
+    <div v-if="!config" class="no-data">
+      <el-alert type="warning" :closable="false" show-icon>
+        <template #title>
+          <span>未找到配置数据，请返回上一步</span>
+        </template>
+      </el-alert>
+      <div class="actions">
+        <el-button @click="handlePrevious">返回上一步</el-button>
+      </div>
+    </div>
+    
+    <ConfigConfirmPanel 
+      v-else
+      :config="config"
+      :parse-result="parseResult"
+      @generate="handleGenerate"
+      @previous="handlePrevious" 
+    />
   </div>
 </template>
 
 <script>
+import { computed } from 'vue'
+import { useGeneratorStore } from '@/stores/useGeneratorStore'
 import ConfigConfirmPanel from '@/components/ConfigConfirmPanel.vue'
+import { generateCode } from '@/services/code-generator'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'ConfigConfirmStep',
@@ -16,13 +37,45 @@ export default {
   
   emits: ['next', 'previous'],
   
-  methods: {
-    handleNext(data) {
-      this.$emit('next', data)
-    },
+  setup(props, { emit }) {
+    const store = useGeneratorStore()
     
-    handlePrevious() {
-      this.$emit('previous')
+    const config = computed(() => store.inferredConfig)
+    const parseResult = computed(() => store.apiParseResult)
+    
+    const handleNext = (data) => {
+      emit('next', data)
+    }
+    
+    const handlePrevious = () => {
+      emit('previous')
+    }
+    
+    const handleGenerate = async (data) => {
+      try {
+        // 先确认配置
+        store.confirmConfig(data)
+        
+        // 生成代码
+        const code = await generateCode(data)
+        store.setGeneratedCode(code)
+        
+        ElMessage.success('代码生成成功')
+        
+        // 进入下一步
+        emit('next', data)
+      } catch (error) {
+        console.error('Generate code error:', error)
+        ElMessage.error('代码生成失败：' + error.message)
+      }
+    }
+    
+    return {
+      config,
+      parseResult,
+      handleNext,
+      handlePrevious,
+      handleGenerate
     }
   }
 }
@@ -34,6 +87,15 @@ export default {
   border-radius: 8px;
   padding: 32px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.no-data {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.no-data .actions {
+  margin-top: 24px;
 }
 </style>
 

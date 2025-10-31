@@ -5,7 +5,18 @@
       <p>预览生成的页面，复制代码到你的项目中</p>
     </div>
 
-    <div class="content-grid">
+    <div v-if="!generatedCode" class="no-code">
+      <el-alert type="warning" :closable="false" show-icon>
+        <template #title>
+          <span>未找到生成的代码，请返回上一步生成</span>
+        </template>
+      </el-alert>
+      <div class="actions">
+        <el-button @click="handlePrevious">返回上一步</el-button>
+      </div>
+    </div>
+
+    <div v-else class="content-grid">
       <!-- 左侧：代码预览 -->
       <div class="code-section">
         <div class="section-header">
@@ -22,7 +33,7 @@
           </div>
         </div>
         <el-input
-          v-model="generatedCode"
+          :model-value="generatedCode"
           type="textarea"
           :rows="25"
           readonly
@@ -43,7 +54,7 @@
       </div>
     </div>
 
-    <div class="action-buttons">
+    <div v-if="generatedCode" class="action-buttons">
       <el-button @click="handlePrevious">⬅️ 上一步</el-button>
       <el-button @click="handleReset">🔄 重新开始</el-button>
     </div>
@@ -174,6 +185,15 @@ export default {
 
 .preview-section {
   min-height: 600px;
+}
+
+.no-code {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.no-code .actions {
+  margin-top: 24px;
 }
 
 .action-buttons {
