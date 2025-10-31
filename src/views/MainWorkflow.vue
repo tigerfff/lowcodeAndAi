@@ -43,7 +43,7 @@
       <!-- 步骤 4: 确认配置 -->
       <config-confirm-step
         v-if="currentStep === 4"
-        @next="handleConfirmNext"
+        @generate="handleGenerate"
         @previous="handlePrevious"
       />
 
@@ -172,6 +172,13 @@ export default {
       store.confirmConfig(config)
       store.nextStep()
     }
+    
+    const handleGenerate = async (data) => {
+      // ConfigConfirmStep 已经处理了代码生成
+      // 这里只需要进入下一步
+      store.confirmConfig(data)
+      store.nextStep()
+    }
 
     const handleNext = () => {
       if (store.canGoNext) {
@@ -206,6 +213,7 @@ export default {
       handleApiParseNext,
       handleInferenceNext,
       handleConfirmNext,
+      handleGenerate,
       handleNext,
       handlePrevious,
       handleReset
