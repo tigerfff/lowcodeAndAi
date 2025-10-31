@@ -62,7 +62,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useGeneratorStore } from '@/stores/useGeneratorStore'
 import PreviewPanel from '@/components/PreviewPanel.vue'
 import { ElMessage } from 'element-plus'
@@ -79,9 +79,17 @@ export default {
   setup(props, { emit }) {
     const store = useGeneratorStore()
     
-    const generatedCode = computed(() => store.generatedCode)
+    const generatedCode = computed(() => {
+      console.log('PreviewGenerateStep - generatedCode computed:', store.generatedCode?.substring(0, 100))
+      return store.generatedCode
+    })
     const config = computed(() => store.confirmedConfig)
     const mockData = computed(() => store.apiParseResult?.mockData || null)
+    
+    onMounted(() => {
+      console.log('PreviewGenerateStep mounted')
+      console.log('Store generatedCode on mount:', store.generatedCode?.substring(0, 100))
+    })
     
     const handleCopyCode = () => {
       if (generatedCode.value) {
