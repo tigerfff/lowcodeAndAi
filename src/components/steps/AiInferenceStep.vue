@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useGeneratorStore } from '@/stores/useGeneratorStore'
 import { inferPageConfig } from '@/services/ai-inference'
 import { ElMessage } from 'element-plus'
@@ -111,6 +111,13 @@ export default {
       emit('previous')
     }
     
+    onMounted(async () => {
+      // 自动触发推断
+      if (store.apiParseResult && !result.value) {
+        await handleStart()
+      }
+    })
+    
     return {
       loading,
       result,
@@ -153,10 +160,6 @@ export default {
   justify-content: center;
   align-items: center;
   min-height: 300px;
-}
-
-.result-container {
-  space-y: 16px;
 }
 
 .result-container > * + * {
