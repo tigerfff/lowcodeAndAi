@@ -53,12 +53,18 @@ export default {
     
     const handleGenerate = async (data) => {
       try {
+        console.log('Generating code with config:', data)
+        
         // 先确认配置
         store.confirmConfig(data)
         
         // 生成代码
         const code = await generateCode(data)
+        console.log('Generated code length:', code.length)
+        
         store.setGeneratedCode(code)
+        
+        console.log('Store generatedCode:', store.generatedCode)
         
         ElMessage.success('代码生成成功')
         
