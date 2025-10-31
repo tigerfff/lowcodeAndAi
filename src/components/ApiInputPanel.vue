@@ -85,6 +85,8 @@
 </template>
 
 <script>
+import { ElMessage, ElMessageBox } from 'element-plus'
+
 export default {
   name: 'ApiInputPanel',
   
@@ -178,12 +180,13 @@ export default {
       }
     },
 
-    handleClear() {
-      this.$confirm('确定清空所有输入内容？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
+    async handleClear() {
+      try {
+        await ElMessageBox.confirm('确定清空所有输入内容？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
         this.responseJson = ''
         this.requestJson = ''
         this.responseError = ''
@@ -191,18 +194,20 @@ export default {
         this.responseValid = false
         this.requestValid = false
         this.$emit('clear')
-      }).catch(() => {})
+      } catch {
+        // 取消操作
+      }
     },
 
     async handleParse() {
       // 最后一次验证
       if (!this.validateJson('response')) {
-        this.$message.error('请先修正响应 JSON 的格式错误')
+        ElMessage.error('请先修正响应 JSON 的格式错误')
         return
       }
 
       if (this.requestJson.trim() && !this.validateJson('request')) {
-        this.$message.error('请先修正请求参数 JSON 的格式错误')
+        ElMessage.error('请先修正请求参数 JSON 的格式错误')
         return
       }
 
@@ -218,9 +223,9 @@ export default {
           request: requestData
         })
 
-        this.$message.success('JSON 解析成功，正在推断数据映射...')
+        ElMessage.success('JSON 解析成功，正在推断数据映射...')
       } catch (error) {
-        this.$message.error('解析失败：' + error.message)
+        ElMessage.error('解析失败：' + error.message)
       } finally {
         setTimeout(() => {
           this.parsing = false
