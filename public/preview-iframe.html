@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>预览</title>
+  
+  <!-- Hui 组件库 CSS -->
+  <link rel="stylesheet" href="./hui2.43.2/lib/hui.css">
+  
+  <!-- Hui-Pro Page 组件库 CSS -->
+  <link rel="stylesheet" href="./hui-pro/page/dist/page.css">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+    }
+    
+    #app {
+      width: 100%;
+      min-height: 100%;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    /* 拖拽目标样式 */
+    .drop-zone {
+      min-height: 100px;
+      border: 2px dashed #d0d0d0;
+      border-radius: 6px;
+      padding: 20px;
+      transition: all 0.2s;
+    }
+    
+    .drop-zone.drag-over {
+      border-color: #409eff;
+      background: #f0f9ff;
+    }
+    
+    .drop-zone-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #909399;
+      font-size: 14px;
+    }
+    
+    /* 组件选中样式 */
+    .component-wrapper {
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .component-wrapper:hover {
+      outline: 2px solid #409eff;
+      outline-offset: 2px;
+    }
+    
+    .component-wrapper.selected {
+      outline: 2px solid #409eff;
+      outline-offset: 2px;
+      background: rgba(64, 158, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="preview-loading" v-if="loading">
+      <p>加载中...</p>
+    </div>
+    <template v-else>
+      <!-- h-page-container -->
+      <div class="h-page-container">
+        <!-- h-page-header -->
+        <div class="h-page-header" v-if="config.pageInfo">
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item
+              v-for="(item, index) in config.pageInfo.breadcrumb"
+              :key="index"
+            >
+              {{ item }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
+          <h2>{{ config.pageInfo.title || '页面标题' }}</h2>
+        </div>
+        
+        <!-- h-page-content -->
+        <div class="h-page-content">
+          <!-- h-page-search 搜索区 -->
+          <div
+            class="drop-zone h-page-search"
+            :class="{ 'drag-over': dragOverZone === 'search' }"
+            @dragover="handleDragOver($event, 'search')"
+            @dragleave="handleDragLeave"
+            @drop="handleDrop($event, 'search')"
+          >
+            <template v-if="config.components.searchArea.length > 0">
+              <el-form :inline="true" size="small">
+                <el-form-item
+                  v-for="comp in config.components.searchArea"
+                  :key="comp.id"
+                  :label="comp.props.label"
+                >
+                  <div
+                    class="component-wrapper"
+                    :class="{ selected: selectedComponentId === comp.id }"
+                    @click.stop="handleSelectComponent(comp.id)"
+                  >
+                    <component
+                      :is="comp.component"
+                      v-bind="comp.props"
+                      style="width: 200px;"
+                    />
+                  </div>
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" size="small">查询</el-button>
+                  <el-button size="small">重置</el-button>
+                </el-form-item>
+              </el-form>
+            </template>
+            <div v-else class="drop-zone-empty">
+              拖拽搜索组件到这里
+            </div>
+          </div>
+          
+          <!-- h-page-table 表格区 -->
+          <div
+            class="drop-zone h-page-table"
+            style="margin-top: 16px;"
+            :class="{ 'drag-over': dragOverZone === 'table' }"
+            @dragover="handleDragOver($event, 'table')"
+            @dragleave="handleDragLeave"
+            @drop="handleDrop($event, 'table')"
+          >
+            <div style="margin-bottom: 12px;">
+              <el-button
+                v-for="(comp, index) in config.components.actionArea"
+                :key="comp.id"
+                :type="comp.props.type || 'default'"
+                size="small"
+                style="margin-right: 8px;"
+              >
+                {{ comp.props.text || '按钮' }}
+              </el-button>
+              <span v-if="config.components.actionArea.length === 0" style="color: #909399; font-size: 13px;">
+                拖拽操作按钮到这里
+              </span>
+            </div>
+            
+            <el-table
+              :data="[]"
+              border
+              size="small"
+              style="width: 100%"
+            >
+              <el-table-column prop="id" label="ID" width="180" />
+              <el-table-column prop="name" label="名称" width="180"/>
+              <el-table-column prop="status" label="状态" width="100" />
+              <el-table-column label="操作" width="150">
+                <template slot-scope="scope">
+                  <el-button type="text" size="small">编辑</el-button>
+                  <el-button type="text" size="small">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            
+            <div style="margin-top: 16px; text-align: right;">
+              <el-pagination
+                layout="total, prev, pager, next"
+                :total="0"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Vue2 和 Element UI -->
+  <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+  <script src="./hui2.43.2/lib/hui.umd.min.js"></script>
+  
+  <!-- Polyfill for process object (required by hui-pro) -->
+  <script>
+    window.process = window.process || { env: { NODE_ENV: 'production' } };
+  </script>
+  
+  <!-- Hui-Pro Page 组件库 -->
+  <script src="./hui-pro/page/dist/page.umd.min.js"></script>
+
+  
+  <!-- 预览脚本 -->
+  <script>
+
+    if (window.hui && window.hui.default) {
+      const HUI = window.hui.default;
+      
+      // 方式1: 如果有 install 方法，直接使用
+      if (typeof HUI.install === 'function') {
+        Vue.use(HUI);
+      } else {
+        // 方式2: 手动注册每个组件
+        Object.keys(HUI).forEach(key => {
+          const component = HUI[key];
+          // 只注册有 name 属性的 Vue 组件
+          if (component && component.name && typeof component.name === 'string') {
+            Vue.component(component.name, component);
+          }
+        });
+      }
+    }
+
+    if (window.HuiProPage && window.HuiProPage.default) {
+      Vue.use(window.HuiProPage.default);
+    }
+  
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          config: {
+            pageInfo: {
+              title: '',
+              breadcrumb: []
+            },
+            components: {
+              searchArea: [],
+              tableArea: null,
+              actionArea: []
+            }
+          },
+          dragOverZone: null,
+          selectedComponentId: null
+        }
+      },
+      mounted() {
+        // 监听来自父窗口的消息
+        window.addEventListener('message', this.handleMessage)
+        
+        // 通知父窗口已加载完成
+        this.postMessageToParent('iframe-ready')
+        
+        console.log('Preview iframe initialized')
+      },
+      beforeDestroy() {
+        window.removeEventListener('message', this.handleMessage)
+      },
+      methods: {
+        /**
+         * 处理来自父窗口的消息
+         */
+        handleMessage(event) {
+          const { type, config } = event.data
+          
+          switch (type) {
+            case 'update-preview':
+              this.updatePreview(config)
+              break
+          }
+        },
+        
+        /**
+         * 更新预览
+         */
+        updatePreview(config) {
+          console.log('Updating preview with config:', config)
+          
+          if (config.components) {
+            this.config = config
+          }
+        },
+        
+        /**
+         * 拖拽悬停
+         */
+        handleDragOver(event, zone) {
+          event.preventDefault()
+          event.stopPropagation()
+          this.dragOverZone = zone
+        },
+        
+        /**
+         * 拖拽离开
+         */
+        handleDragLeave(event) {
+          this.dragOverZone = null
+        },
+        
+        /**
+         * 拖拽放置
+         */
+        handleDrop(event, zone) {
+          event.preventDefault()
+          event.stopPropagation()
+          this.dragOverZone = null
+          
+          // 通知父窗口
+          const componentData = event.dataTransfer.getData('component')
+          if (componentData) {
+            this.postMessageToParent('drop-component', {
+              zone,
+              component: JSON.parse(componentData)
+            })
+          }
+        },
+        
+        /**
+         * 选中组件
+         */
+        handleSelectComponent(componentId) {
+          this.selectedComponentId = componentId
+          this.postMessageToParent('select-component', { componentId })
+        },
+        
+        /**
+         * 发送消息到父窗口
+         */
+        postMessageToParent(type, data = {}) {
+          window.parent.postMessage({ type, data }, '*')
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
