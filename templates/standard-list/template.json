@@ -18,6 +18,96 @@
       "pagination": "el-pagination"
     }
   },
+  "previewLayout": {
+    "description": "预览时的动态布局配置",
+    "root": {
+      "component": "h-page-container",
+      "class": "h-page-container",
+      "children": [
+        {
+          "component": "h-page-header",
+          "class": "h-page-header",
+          "renderType": "header"
+        },
+        {
+          "component": "h-page-content",
+          "class": "h-page-content",
+          "children": [
+            {
+              "component": "h-page-search",
+              "class": "drop-zone",
+              "dropZone": "search",
+              "props": {
+                "showHighFrequency": true,
+                "column": 3
+              },
+              "slots": {
+                "default": "searchArea"
+              },
+              "emptyText": "拖拽搜索组件到这里"
+            },
+            {
+              "component": "h-page-table",
+              "class": "drop-zone",
+              "dropZone": "table",
+              "props": {
+                "fixedHeight": true
+              },
+              "slots": {
+                "pageTableAction": "actionArea"
+              },
+              "emptyText": "拖拽操作按钮到这里",
+              "children": [
+                {
+                  "component": "el-table",
+                  "slot": "default",
+                  "props": {
+                    "data": [],
+                    "border": true,
+                    "size": "small"
+                  },
+                  "children": [
+                    {
+                      "component": "el-table-column",
+                      "props": {
+                        "prop": "id",
+                        "label": "ID",
+                        "width": "180"
+                      }
+                    },
+                    {
+                      "component": "el-table-column",
+                      "props": {
+                        "prop": "name",
+                        "label": "名称",
+                        "width": "180"
+                      }
+                    },
+                    {
+                      "component": "el-table-column",
+                      "props": {
+                        "prop": "status",
+                        "label": "状态",
+                        "width": "100"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "component": "el-pagination",
+                  "slot": "pagination",
+                  "props": {
+                    "layout": "total, prev, pager, next",
+                    "total": 0
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
   "aiTasks": [
     "从 API 响应推断表格列配置（字段名、显示标签、数据类型、列宽、格式化）",
     "从 API 请求参数推断搜索字段配置（字段名、控件类型、默认值、选项数据源）",

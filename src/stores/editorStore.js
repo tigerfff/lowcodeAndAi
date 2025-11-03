@@ -29,6 +29,9 @@ export const useEditorStore = defineStore('editor', {
       globalAiPrompt: ''
     },
     
+    // 模板静态组件的配置（用户编辑后的状态）
+    templateStaticComponents: {},  // { [componentId]: { component, props, ... } }
+    
     // 历史记录（用于撤销/重做）
     history: [],
     historyIndex: -1,
@@ -63,6 +66,10 @@ export const useEditorStore = defineStore('editor', {
       )
       if (actionComp) return actionComp
       
+      // 在静态模板组件中查找
+      const staticComp = state.templateStaticComponents[state.selectedComponentId]
+      if (staticComp) return staticComp
+      
       return null
     }
   },
@@ -74,7 +81,55 @@ export const useEditorStore = defineStore('editor', {
     selectTemplate(template) {
       this.selectedTemplate = template
       this.pageConfig.pageInfo.name = template.id
+      // 初始化静态组件配置
+      this.initStaticComponents(template)
       this.saveHistory()
+    },
+    
+    /**
+     * 初始化静态组件配置
+     */
+    initStaticComponents(template) {
+      if (!template || !template.previewLayout) return
+      
+      // 递归收集所有需要可编辑的静态组件
+      const collectStaticComponents = (node, path = '') => {
+        const componentId = node.componentId || this.generateComponentId(node, path)
+        
+        // 判断是否需要可编辑（el-table, el-pagination 等）
+        const editableComponents = ['el-table', 'el-pagination', 'el-table-column']
+        if (editableComponents.includes(node.component)) {
+          // 初始化配置
+          if (!this.templateStaticComponents[componentId]) {
+            this.templateStaticComponents[componentId] = {
+              id: componentId,
+              component: node.component,
+              props: { ...node.props },
+              type: 'static',
+              apiBindings: []
+            }
+          }
+        }
+        
+        // 递归处理子节点
+        if (node.children && Array.isArray(node.children)) {
+          node.children.forEach((child, index) => {
+            const childPath = node.componentId ? `${node.componentId}.${child.component}` : `${path}.${child.component}`
+            collectStaticComponents(child, childPath)
+          })
+        }
+      }
+      
+      collectStaticComponents(template.previewLayout.root)
+    },
+    
+    /**
+     * 生成组件 ID
+     */
+    generateComponentId(node, parentPath = '') {
+      if (node.componentId) return node.componentId
+      const prefix = parentPath ? `${parentPath}.` : ''
+      return `${prefix}${node.component}`
     },
     
     /**
@@ -116,6 +171,16 @@ export const useEditorStore = defineStore('editor', {
       const component = this.selectedComponent
       if (component && component.id === componentId) {
         Object.assign(component, updates)
+        this.saveHistory()
+      }
+    },
+    
+    /**
+     * 更新静态组件配置
+     */
+    updateStaticComponent(componentId, updates) {
+      if (this.templateStaticComponents[componentId]) {
+        Object.assign(this.templateStaticComponents[componentId], updates)
         this.saveHistory()
       }
     },
@@ -250,6 +315,7 @@ export const useEditorStore = defineStore('editor', {
         },
         globalAiPrompt: ''
       }
+      this.templateStaticComponents = {}
       this.history = []
       this.historyIndex = -1
     }

@@ -10,6 +10,8 @@
   
   <!-- Hui-Pro Page 组件库 CSS -->
   <link rel="stylesheet" href="./hui-pro/page/dist/page.css">
+
+  <link rel="stylesheet" href="./hui-pro/layout/dist/layout.css">
   
   <style>
     * {
@@ -69,120 +71,51 @@
       outline-offset: 2px;
       background: rgba(64, 158, 255, 0.05);
     }
+    
+    /* 静态组件包裹器 */
+    .static-component-wrapper {
+      position: relative;
+    }
+    
+    /* 无模板提示 */
+    .no-template {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      color: #909399;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
-  <div id="app">
+  <div
+    id="app"
+    @dragover.prevent="handleDragOverGlobal"
+    @drop.prevent="handleDropGlobal"
+  >
     <div class="preview-loading" v-if="loading">
       <p>加载中...</p>
     </div>
-    <template v-else>
-      <!-- h-page-container -->
-      <div class="h-page-container">
-        <!-- h-page-header -->
-        <div class="h-page-header" v-if="config.pageInfo">
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item
-              v-for="(item, index) in config.pageInfo.breadcrumb"
-              :key="index"
-            >
-              {{ item }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-          <h2>{{ config.pageInfo.title || '页面标题' }}</h2>
-        </div>
-        
-        <!-- h-page-content -->
-        <div class="h-page-content">
-          <!-- h-page-search 搜索区 -->
-          <div
-            class="drop-zone h-page-search"
-            :class="{ 'drag-over': dragOverZone === 'search' }"
-            @dragover="handleDragOver($event, 'search')"
-            @dragleave="handleDragLeave"
-            @drop="handleDrop($event, 'search')"
-          >
-            <template v-if="config.components.searchArea.length > 0">
-              <el-form :inline="true" size="small">
-                <el-form-item
-                  v-for="comp in config.components.searchArea"
-                  :key="comp.id"
-                  :label="comp.props.label"
-                >
-                  <div
-                    class="component-wrapper"
-                    :class="{ selected: selectedComponentId === comp.id }"
-                    @click.stop="handleSelectComponent(comp.id)"
-                  >
-                    <component
-                      :is="comp.component"
-                      v-bind="comp.props"
-                      style="width: 200px;"
-                    />
-                  </div>
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" size="small">查询</el-button>
-                  <el-button size="small">重置</el-button>
-                </el-form-item>
-              </el-form>
-            </template>
-            <div v-else class="drop-zone-empty">
-              拖拽搜索组件到这里
-            </div>
-          </div>
-          
-          <!-- h-page-table 表格区 -->
-          <div
-            class="drop-zone h-page-table"
-            style="margin-top: 16px;"
-            :class="{ 'drag-over': dragOverZone === 'table' }"
-            @dragover="handleDragOver($event, 'table')"
-            @dragleave="handleDragLeave"
-            @drop="handleDrop($event, 'table')"
-          >
-            <div style="margin-bottom: 12px;">
-              <el-button
-                v-for="(comp, index) in config.components.actionArea"
-                :key="comp.id"
-                :type="comp.props.type || 'default'"
-                size="small"
-                style="margin-right: 8px;"
-              >
-                {{ comp.props.text || '按钮' }}
-              </el-button>
-              <span v-if="config.components.actionArea.length === 0" style="color: #909399; font-size: 13px;">
-                拖拽操作按钮到这里
-              </span>
-            </div>
-            
-            <el-table
-              :data="[]"
-              border
-              size="small"
-              style="width: 100%"
-            >
-              <el-table-column prop="id" label="ID" width="180" />
-              <el-table-column prop="name" label="名称" width="180"/>
-              <el-table-column prop="status" label="状态" width="100" />
-              <el-table-column label="操作" width="150">
-                <template slot-scope="scope">
-                  <el-button type="text" size="small">编辑</el-button>
-                  <el-button type="text" size="small">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            
-            <div style="margin-top: 16px; text-align: right;">
-              <el-pagination
-                layout="total, prev, pager, next"
-                :total="0"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+    
+    <!-- 动态渲染模板布局 -->
+    <template v-else-if="templateLayout">
+      <layout-node
+        :node="templateLayout.root"
+        :config="config"
+        :drag-over-zone="dragOverZone"
+        :selected-component-id="selectedComponentId"
+        @dragover="handleDragOver"
+        @dragleave="handleDragLeave"
+        @drop="handleDrop"
+        @select-component="handleSelectComponent"
+      />
     </template>
+    
+    <!-- 降级：无模板时显示提示 -->
+    <div v-else class="no-template">
+      <p>请选择一个模板开始设计</p>
+    </div>
   </div>
 
   <!-- Vue2 和 Element UI -->
@@ -196,6 +129,8 @@
   
   <!-- Hui-Pro Page 组件库 -->
   <script src="./hui-pro/page/dist/page.umd.min.js"></script>
+
+  <script src="./hui-pro/layout/dist/layout.umd.min.js"></script>
 
   
   <!-- 预览脚本 -->
@@ -219,15 +154,310 @@
       }
     }
 
-    if (window.HuiProPage && window.HuiProPage.default) {
-      Vue.use(window.HuiProPage.default);
+    // 注册 hui-pro/page 组件（全局变量名是 page）
+    if (window.page) {
+      console.log('✅ Found window.page:', window.page)
+      
+      if (window.page.default && typeof window.page.default.install === 'function') {
+        Vue.use(window.page.default)
+        console.log('✅ Registered hui-pro/page via Vue.use(window.page.default)')
+      } else if (typeof window.page.install === 'function') {
+        Vue.use(window.page)
+        console.log('✅ Registered hui-pro/page via Vue.use(window.page)')
+      } else {
+        console.warn('⚠️ window.page found but no install method, trying manual registration')
+        Object.keys(window.page).forEach(key => {
+          const component = window.page[key]
+          if (component && component.name && typeof component.name === 'string') {
+            Vue.component(component.name, component)
+            console.log(`✅ Registered component: ${component.name}`)
+          }
+        })
+      }
+    } else {
+      console.error('❌ window.page not found!')
     }
+
+    if(window.layout) {
+      Vue.use(window.layout)
+    }
+  
+    // 定义递归布局节点组件
+    Vue.component('layout-node', {
+      name: 'LayoutNode',
+      props: {
+        node: {
+          type: Object,
+          required: true
+        },
+        config: {
+          type: Object,
+          required: true
+        },
+        dragOverZone: String,
+        selectedComponentId: String,
+        parentPath: {
+          type: String,
+          default: ''
+        }
+      },
+      template: `
+        <!-- 可编辑的静态组件 -->
+        <div v-if="hasComponentId" class="static-component-wrapper">
+          <div
+            class="component-wrapper"
+            :class="{ selected: selectedComponentId === componentId }"
+            @click.stop="$emit('select-component', componentId)"
+          >
+            <component
+              :is="node.component"
+              :class="nodeClass"
+              v-bind="nodeProps"
+              v-on="nodeEvents"
+            >
+              <!-- 渲染子节点 -->
+              <template v-if="node.children && node.children.length > 0">
+                <layout-node
+                  v-for="(child, index) in node.children"
+                  :key="index"
+                  :node="child"
+                  :config="config"
+                  :drag-over-zone="dragOverZone"
+                  :selected-component-id="selectedComponentId"
+                  :parent-path="currentPath"
+                  v-on="$listeners"
+                />
+              </template>
+              
+              <!-- 其他插槽内容 -->
+              <slot></slot>
+            </component>
+          </div>
+        </div>
+        
+        <!-- 普通渲染 -->
+        <component v-else :is="node.component" :class="nodeClass" v-bind="nodeProps" v-on="nodeEvents">
+          <!-- 特殊渲染：页面头部 -->
+          <template v-if="node.renderType === 'header'">
+            <el-breadcrumb separator="/" v-if="config.pageInfo && config.pageInfo.breadcrumb">
+              <el-breadcrumb-item
+                v-for="(item, index) in config.pageInfo.breadcrumb"
+                :key="index"
+              >
+                {{ item }}
+              </el-breadcrumb-item>
+            </el-breadcrumb>
+            <h2>{{ config.pageInfo ? config.pageInfo.title || '页面标题' : '页面标题' }}</h2>
+          </template>
+          
+          <!-- 渲染子节点 -->
+          <template v-else-if="node.children && node.children.length > 0">
+            <layout-node
+              v-for="(child, index) in node.children"
+              :key="index"
+              :node="child"
+              :config="config"
+              :drag-over-zone="dragOverZone"
+              :selected-component-id="selectedComponentId"
+              :parent-path="currentPath"
+              v-on="$listeners"
+            />
+          </template>
+          
+          <!-- 渲染 slot 内容（用户拖拽的组件） -->
+          <template v-if="node.slots">
+            <template v-for="(slotName, slotKey) in node.slots">
+              <template v-if="config.components[slotName]">
+                <!-- 搜索区渲染 - 使用 h-page-search-item 包裹 -->
+                <template v-if="slotName === 'searchArea'">
+                  <h-page-search-item
+                    v-for="comp in config.components[slotName]"
+                    :key="comp.id"
+                    :label="comp.props.label"
+                    :prop="comp.props.prop"
+                  >
+                    <div
+                      class="component-wrapper"
+                      :class="{ selected: selectedComponentId === comp.id }"
+                      @click.stop="$emit('select-component', comp.id)"
+                    >
+                      <component
+                        :is="comp.component"
+                        v-bind="getComponentPropsWithoutWrapper(comp)"
+                        :value="comp.props.value || ''"
+                      />
+                    </div>
+                  </h-page-search-item>
+                </template>
+                
+                <!-- 操作区渲染 - h-page-table 的 pageTableAction slot -->
+                <template v-else-if="slotName === 'actionArea'">
+                  <el-button
+                    v-for="comp in config.components[slotName]"
+                    :key="comp.id"
+                    :type="comp.props.type || 'primary'"
+                    size="small"
+                    style="margin-right: 8px;"
+                  >
+                    {{ comp.props.text || '按钮' }}
+                  </el-button>
+                </template>
+                
+                <!-- 其他区域通用渲染 -->
+                <template v-else>
+                  <component
+                    v-for="comp in config.components[slotName]"
+                    :key="comp.id"
+                    :is="comp.wrapper || 'div'"
+                    v-bind="getWrapperProps(comp)"
+                  >
+                    <div
+                      class="component-wrapper"
+                      :class="{ selected: selectedComponentId === comp.id }"
+                      @click.stop="$emit('select-component', comp.id)"
+                    >
+                      <component
+                        :is="comp.component"
+                        v-bind="getComponentProps(comp)"
+                      />
+                    </div>
+                  </component>
+                </template>
+              </template>
+            </template>
+          </template>
+          
+          <!-- 空状态提示 -->
+          <div v-if="node.dropZone && isDropZoneEmpty" class="drop-zone-empty">
+            {{ node.emptyText || '拖拽组件到这里' }}
+          </div>
+        </component>
+      `,
+      computed: {
+        nodeClass() {
+          const classes = [this.node.class]
+          if (this.node.dropZone) {
+            classes.push('drop-zone')
+            if (this.dragOverZone === this.node.dropZone) {
+              classes.push('drag-over')
+            }
+          }
+          return classes.filter(Boolean).join(' ')
+        },
+        nodeProps() {
+          const props = { ...this.node.props }
+          
+          // 替换模板变量
+          Object.keys(props).forEach(key => {
+            if (typeof props[key] === 'string') {
+              props[key] = this.replaceTemplateVars(props[key])
+            }
+          })
+          
+          return props
+        },
+        nodeEvents() {
+          if (!this.node.dropZone) return {}
+          
+          return {
+            dragover: (event) => this.$emit('dragover', event, this.node.dropZone),
+            dragleave: (event) => this.$emit('dragleave', event),
+            drop: (event) => this.$emit('drop', event, this.node.dropZone)
+          }
+        },
+        isDropZoneEmpty() {
+          if (!this.node.slots) return true
+          
+          for (const slotName of Object.values(this.node.slots)) {
+            if (this.config.components[slotName] && this.config.components[slotName].length > 0) {
+              return false
+            }
+          }
+          return true
+        },
+        hasComponentId() {
+          // 如果有显式 componentId 或需要为重要组件生成 ID
+          return this.node.componentId !== undefined || this.shouldGenerateId()
+        },
+        componentId() {
+          // 显式 ID 优先，否则自动生成
+          if (this.node.componentId) {
+            return this.node.componentId
+          }
+          return this.generateComponentId()
+        },
+        currentPath() {
+          // 当前节点的路径
+          if (this.node.componentId) {
+            return this.node.componentId
+          }
+          return this.generateComponentId()
+        }
+      },
+      methods: {
+        replaceTemplateVars(str) {
+          // 替换 {{pageInfo.title}} 等模板变量
+          return str.replace(/\{\{(.+?)\}\}/g, (match, path) => {
+            const keys = path.trim().split('.')
+            let value = this.config
+            for (const key of keys) {
+              value = value?.[key]
+            }
+            return value || ''
+          })
+        },
+        getWrapperProps(comp) {
+          if (!comp.wrapper) return {}
+          
+          const wrapperProps = {}
+          const wrapperPropsList = comp.wrapperProps || ['label', 'prop']
+          
+          wrapperPropsList.forEach(key => {
+            if (comp.props && comp.props[key] !== undefined) {
+              wrapperProps[key] = comp.props[key]
+            }
+          })
+          
+          return wrapperProps
+        },
+        getComponentProps(comp) {
+          const props = { ...comp.props }
+          
+          // 移除 wrapper 的属性
+          const wrapperPropsList = comp.wrapperProps || ['label', 'prop']
+          wrapperPropsList.forEach(key => {
+            delete props[key]
+          })
+          
+          return props
+        },
+        getComponentPropsWithoutWrapper(comp) {
+          // 专门用于 h-page-search-item 场景，移除 label 和 prop
+          const props = { ...comp.props }
+          delete props.label
+          delete props.prop
+          return props
+        },
+        shouldGenerateId() {
+          // 判断是否需要为静态组件生成 ID
+          // 目前策略：el-table, el-pagination 等数据展示组件需要可编辑
+          const editableComponents = ['el-table', 'el-pagination', 'el-table-column']
+          return editableComponents.includes(this.node.component)
+        },
+        generateComponentId() {
+          // 自动生成层级唯一的 ID
+          const parentPrefix = this.parentPath ? `${this.parentPath}.` : ''
+          return `${parentPrefix}${this.node.component}`
+        }
+      }
+    })
   
     new Vue({
       el: '#app',
       data() {
         return {
           loading: false,
+          templateLayout: null, // 模板布局配置
           config: {
             pageInfo: {
               title: '',
@@ -274,9 +504,32 @@
          */
         updatePreview(config) {
           console.log('Updating preview with config:', config)
+          console.log('Received templateLayout:', config?.templateLayout)
           
-          if (config.components) {
-            this.config = config
+          if (config) {
+            // 更新模板布局
+            if (config.templateLayout) {
+              this.templateLayout = config.templateLayout
+              console.log('✅ Template layout updated:', this.templateLayout)
+            } else {
+              console.warn('⚠️ No templateLayout in config!')
+            }
+            
+            // 更新页面信息
+            if (config.pageInfo) {
+              this.config.pageInfo = config.pageInfo
+            }
+            
+            // 更新组件配置
+            if (config.components) {
+              this.config.components = config.components
+            }
+            
+            // 强制更新视图
+            this.$nextTick(() => {
+              console.log('Preview updated. Current templateLayout:', this.templateLayout)
+              console.log('Current config:', this.config)
+            })
           }
         },
         
@@ -297,7 +550,7 @@
         },
         
         /**
-         * 拖拽放置
+         * 拖拽放置（从 layout-node 触发，有 zone 参数）
          */
         handleDrop(event, zone) {
           event.preventDefault()
@@ -306,11 +559,54 @@
           
           // 通知父窗口
           const componentData = event.dataTransfer.getData('component')
+          console.log('Drop event:', { zone, componentData })
+          
           if (componentData) {
+            const component = JSON.parse(componentData)
+            console.log('Parsed component:', component)
+            
             this.postMessageToParent('drop-component', {
               zone,
-              component: JSON.parse(componentData)
+              component
             })
+            
+            console.log('Drop message sent to parent')
+          } else {
+            console.warn('No component data in drop event')
+          }
+        },
+        
+        /**
+         * 全局拖拽悬停（从 #app 触发）
+         */
+        handleDragOverGlobal(event) {
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+        },
+        
+        /**
+         * 全局拖拽放置（从 #app 触发，没有 zone）
+         */
+        handleDropGlobal(event) {
+          event.preventDefault()
+          event.stopPropagation()
+          
+          const componentData = event.dataTransfer.getData('component')
+          console.log('Global drop event:', componentData)
+          
+          if (componentData) {
+            const component = JSON.parse(componentData)
+            console.log('Parsed component:', component)
+            
+            // 默认添加到搜索区
+            this.postMessageToParent('drop-component', {
+              zone: 'search',
+              component
+            })
+            
+            console.log('Global drop message sent to parent')
+          } else {
+            console.warn('No component data in global drop event')
           }
         },
         

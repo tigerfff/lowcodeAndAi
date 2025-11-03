@@ -94,10 +94,10 @@ export default {
   setup() {
     // 搜索关键词
     const searchKeyword = ref('')
-    
+
     // 展开的分类
     const activeCategories = ref(['search', 'table', 'action'])
-    
+
     // 组件库数据（临时，后续从 componentLibrary service 加载）
     const components = {
       search: [
@@ -107,12 +107,13 @@ export default {
           description: '文本输入',
           icon: 'el-icon-edit',
           wrapper: 'h-page-search-item',
+          wrapperProps: ['label', 'prop'],
           defaultProps: {
-            prop: '',
+            prop: 'fieldName',
             label: '字段名',
             placeholder: '请输入',
-            clearable: true
-          }
+            clearable: true,
+          },
         },
         {
           name: 'el-select',
@@ -120,12 +121,13 @@ export default {
           description: '单选/多选',
           icon: 'el-icon-arrow-down',
           wrapper: 'h-page-search-item',
+          wrapperProps: ['label', 'prop'],
           defaultProps: {
-            prop: '',
+            prop: 'fieldName',
             label: '字段名',
             placeholder: '请选择',
-            clearable: true
-          }
+            clearable: true,
+          },
         },
         {
           name: 'el-date-picker',
@@ -133,12 +135,13 @@ export default {
           description: '日期/日期范围',
           icon: 'el-icon-date',
           wrapper: 'h-page-search-item',
+          wrapperProps: ['label', 'prop'],
           defaultProps: {
-            prop: '',
+            prop: 'fieldName',
             label: '字段名',
             type: 'daterange',
-            'value-format': 'yyyy-MM-dd'
-          }
+            'value-format': 'yyyy-MM-dd',
+          },
         },
         {
           name: 'el-cascader',
@@ -146,12 +149,13 @@ export default {
           description: '多级联动',
           icon: 'el-icon-connection',
           wrapper: 'h-page-search-item',
+          wrapperProps: ['label', 'prop'],
           defaultProps: {
-            prop: '',
+            prop: 'fieldName',
             label: '字段名',
-            placeholder: '请选择'
-          }
-        }
+            placeholder: '请选择',
+          },
+        },
       ],
       table: [
         {
@@ -163,9 +167,9 @@ export default {
           defaultProps: {
             prop: '',
             label: '列名',
-            width: ''
-          }
-        }
+            width: '',
+          },
+        },
       ],
       action: [
         {
@@ -176,52 +180,51 @@ export default {
           wrapper: null,
           defaultProps: {
             type: 'primary',
-            text: '按钮'
-          }
-        }
-      ]
+            text: '按钮',
+          },
+        },
+      ],
     }
-    
+
     // 过滤后的组件
     const filteredComponents = computed(() => {
       const keyword = searchKeyword.value.toLowerCase()
       if (!keyword) return components
-      
+
       const result = {}
       for (const category in components) {
         result[category] = components[category].filter(
-          comp => comp.label.toLowerCase().includes(keyword) ||
-                 comp.description.toLowerCase().includes(keyword)
+          comp =>
+            comp.label.toLowerCase().includes(keyword) ||
+            comp.description.toLowerCase().includes(keyword)
         )
       }
       return result
     })
-    
+
     // 拖拽开始
     const handleDragStart = (event, component) => {
       // 设置拖拽数据
       event.dataTransfer.effectAllowed = 'copy'
       event.dataTransfer.setData('component', JSON.stringify(component))
-      
+
       // 添加拖拽样式
       event.target.classList.add('dragging')
-      
-      console.log('开始拖拽组件:', component.label)
     }
-    
+
     // 拖拽结束
-    const handleDragEnd = (event) => {
+    const handleDragEnd = event => {
       event.target.classList.remove('dragging')
     }
-    
+
     return {
       searchKeyword,
       activeCategories,
       filteredComponents,
       handleDragStart,
-      handleDragEnd
+      handleDragEnd,
     }
-  }
+  },
 }
 </script>
 
@@ -339,4 +342,3 @@ export default {
   font-size: 13px;
 }
 </style>
-

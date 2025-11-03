@@ -5,8 +5,6 @@
     <h-page-header :breadcrumb="breadcrumb" slot="pageHeader" />
     
     <h-page-content>
-      {{#if searchFields}}
-      <!-- 搜索条件 -->
       <h-page-search ref="filters" :model="filters">
         {{#each searchFields}}
         <h-page-search-item label="{{label}}" prop="{{prop}}">
@@ -53,7 +51,6 @@
           <el-button @click="reset">重置</el-button>
         </template>
       </h-page-search>
-      {{/if}}
 
       <!-- 表格 -->
       <h-page-table>

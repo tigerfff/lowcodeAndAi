@@ -8,26 +8,32 @@
       </div>
       <div class="toolbar-right">
         <el-button-group size="small">
-          <el-button icon="el-icon-monitor" :class="{ active: deviceMode === 'desktop' }" @click="deviceMode = 'desktop'">
+          <el-button
+            icon="el-icon-monitor"
+            :class="{ active: deviceMode === 'desktop' }"
+            @click="deviceMode = 'desktop'"
+          >
             桌面
           </el-button>
-          <el-button icon="el-icon-mobile-phone" :class="{ active: deviceMode === 'mobile' }" @click="deviceMode = 'mobile'">
+          <el-button
+            icon="el-icon-mobile-phone"
+            :class="{ active: deviceMode === 'mobile' }"
+            @click="deviceMode = 'mobile'"
+          >
             移动
           </el-button>
         </el-button-group>
-        <el-button size="small" icon="el-icon-refresh" @click="handleRefresh">
-          刷新
-        </el-button>
+        <el-button size="small" icon="el-icon-refresh" @click="handleRefresh"> 刷新 </el-button>
       </div>
     </div>
 
     <!-- 预览容器 -->
     <div class="preview-container" :class="{ 'device-mobile': deviceMode === 'mobile' }">
-      <div class="preview-loading" v-if="loading">
+      <div v-if="loading" class="preview-loading">
         <i class="el-icon-loading" />
         <span>加载中...</span>
       </div>
-      
+
       <!-- iframe 预览 -->
       <iframe
         ref="previewIframe"
@@ -36,123 +42,207 @@
         frameborder="0"
         @load="handleIframeLoad"
       />
-      
-      <!-- 拖拽放置区域提示 -->
-      <div
-        v-if="!hasComponents"
-        class="preview-empty"
-        @dragover.prevent="handleDragOver"
-        @drop="handleDrop"
-      >
-        <i class="el-icon-plus" />
-        <p>从左侧拖拽组件到这里</p>
-        <p class="tip">选择模板后，可以拖拽组件到对应的 slot 区域</p>
+
+      <!-- 未选择模板提示 -->
+      <div v-if="!editorStore.selectedTemplate" class="preview-empty">
+        <i class="el-icon-document" />
+        <p>请先在顶部选择一个模板</p>
+        <p class="tip">选择模板后即可开始设计页面</p>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useEditorStore } from '@/stores/editorStore'
 
 export default {
   name: 'PreviewPanel',
   setup() {
     const editorStore = useEditorStore()
-    
+
     // 预览 iframe 引用
     const previewIframe = ref(null)
-    
+
     // 设备模式
     const deviceMode = ref('desktop')
-    
+
     // 加载状态
     const loading = ref(true)
-    
+
     // iframe URL（临时使用空白页，后续需要创建 preview-iframe.html）
     const iframeUrl = ref('/preview-iframe.html')
-    
+
     // 模板名称
     const templateName = computed(() => {
       return editorStore.selectedTemplate?.label || '未选择模板'
     })
-    
+
     // 是否有组件
     const hasComponents = computed(() => {
       const { searchArea, actionArea, tableArea } = editorStore.pageConfig.components
       return searchArea.length > 0 || actionArea.length > 0 || tableArea !== null
     })
-    
+
     // iframe 加载完成
     const handleIframeLoad = () => {
       loading.value = false
-      console.log('Preview iframe loaded')
-      
+      console.log('🎬 Preview iframe loaded')
+      console.log('🎬 Current selectedTemplate:', editorStore.selectedTemplate)
+
       // 向 iframe 发送初始配置
-      updatePreview()
+      if (editorStore.selectedTemplate) {
+        console.log('🎬 Sending initial config')
+        updatePreview()
+      } else {
+        console.warn('⚠️ No template selected on iframe load')
+      }
     }
-    
+
     // 更新预览
     const updatePreview = () => {
-      if (!previewIframe.value) return
-      
-      const config = {
-        template: editorStore.selectedTemplate,
-        components: editorStore.pageConfig.components
+      if (!previewIframe.value) {
+        console.warn('⚠️ previewIframe not ready')
+        return
       }
-      
-      // 通过 postMessage 发送配置到 iframe
-      previewIframe.value.contentWindow?.postMessage({
-        type: 'update-preview',
-        config
-      }, '*')
+
+      console.log('📤 Updating preview...')
+      console.log('selectedTemplate:', editorStore.selectedTemplate)
+      console.log('previewLayout:', editorStore.selectedTemplate?.previewLayout)
+
+      try {
+        // 序列化配置，移除不可克隆的对象（如函数）
+        const config = JSON.parse(
+          JSON.stringify({
+            pageInfo: editorStore.pageConfig.pageInfo,
+            components: editorStore.pageConfig.components,
+            templateLayout: editorStore.selectedTemplate?.previewLayout || null, // 👈 添加模板布局
+            template: editorStore.selectedTemplate
+              ? {
+                  id: editorStore.selectedTemplate.id,
+                  label: editorStore.selectedTemplate.label,
+                }
+              : null,
+          })
+        )
+
+        console.log('📤 Sending config to iframe:', config)
+        console.log('📤 templateLayout being sent:', config.templateLayout)
+
+        // 通过 postMessage 发送配置到 iframe
+        previewIframe.value.contentWindow?.postMessage(
+          {
+            type: 'update-preview',
+            config,
+          },
+          '*'
+        )
+      } catch (error) {
+        console.error('Failed to update preview:', error)
+      }
     }
-    
+
     // 刷新预览
     const handleRefresh = () => {
       loading.value = true
       previewIframe.value?.contentWindow?.location.reload()
     }
-    
+
     // 拖拽悬停
-    const handleDragOver = (event) => {
+    const handleDragOver = event => {
       event.preventDefault()
       event.dataTransfer.dropEffect = 'copy'
     }
-    
+
     // 拖拽放置
-    const handleDrop = (event) => {
+    const handleDrop = event => {
       event.preventDefault()
-      
+
       try {
         const componentData = JSON.parse(event.dataTransfer.getData('component'))
         console.log('放置组件:', componentData)
-        
+
         // 添加组件到配置
         // 默认添加到搜索区（实际应该根据拖拽目标位置判断）
         const slotPath = 'h-page-search.default'
         editorStore.addComponent(slotPath, componentData)
-        
+
         // 更新预览
         updatePreview()
-        
+
         // 提示
-        this.$message.success(`已添加 ${componentData.label}`)
+        ElMessage.success(`已添加 ${componentData.label}`)
       } catch (error) {
         console.error('放置组件失败:', error)
-        this.$message.error('添加组件失败')
+        ElMessage.error('添加组件失败')
       }
     }
-    
+
+    // 处理从 iframe 拖拽放置的组件
+    const handleDropFromIframe = data => {
+      const { zone, component } = data
+
+      console.log('从 iframe 接收到组件:', component, '目标区域:', zone)
+
+      // 根据 zone 确定添加到哪个区域
+      let targetArea
+      if (zone === 'search') {
+        targetArea = 'searchArea'
+      } else if (zone === 'table') {
+        targetArea = 'actionArea' // 表格区的按钮
+      } else {
+        targetArea = 'searchArea' // 默认
+      }
+
+      // 生成唯一 ID
+      const componentId = `${component.name}_${Date.now()}`
+
+      // 构建组件配置，确保包含所有必需属性
+      const componentConfig = {
+        id: componentId,
+        component: component.name,
+        wrapper: component.wrapper || null, // 👈 保存 wrapper
+        wrapperProps: component.wrapperProps || [], // 👈 保存 wrapperProps
+        props: {
+          ...component.defaultProps,
+          label: component.label || component.defaultProps?.label,
+          value: '', // 为 el-select 等组件添加默认 value
+          prop: component.defaultProps?.prop || `field_${Date.now()}`,
+        },
+        apiBindings: [], // 初始化 apiBindings 数组
+      }
+
+      // 添加到对应区域
+      editorStore.pageConfig.components[targetArea].push(componentConfig)
+
+      // 更新预览
+      updatePreview()
+
+      console.log('组件已添加到', targetArea, componentConfig)
+    }
+
     // 监听来自 iframe 的消息
-    const handleMessage = (event) => {
+    const handleMessage = event => {
       const { type, data } = event.data
-      
+
       switch (type) {
+        case 'drop-component':
+          // 处理从 iframe 拖拽放置的组件
+          handleDropFromIframe(data)
+          break
         case 'select-component':
           // 选中组件
           editorStore.selectComponent(data.componentId)
+          break
+        case 'iframe-ready':
+          // iframe 加载完成，发送初始配置
+          console.log('Iframe ready, sending initial config')
+          // 只有在有模板时才发送配置，否则 iframe 会显示"请选择模板"
+          if (editorStore.selectedTemplate) {
+            updatePreview()
+          }
           break
         case 'log':
           // iframe 日志
@@ -160,16 +250,45 @@ export default {
           break
       }
     }
-    
+
     onMounted(() => {
       window.addEventListener('message', handleMessage)
     })
-    
+
     onBeforeUnmount(() => {
       window.removeEventListener('message', handleMessage)
     })
-    
+
+    // 监听模板变化，自动更新预览
+    watch(
+      () => editorStore.selectedTemplate,
+      newTemplate => {
+        console.log('🔄 Template changed:', newTemplate)
+        console.log('🔄 loading:', loading.value)
+        if (newTemplate && !loading.value) {
+          // 只有在 iframe 加载完成后才更新
+          console.log('🔄 Triggering updatePreview from watch')
+          updatePreview()
+        } else if (!newTemplate) {
+          console.warn('⚠️ Template is null')
+        } else if (loading.value) {
+          console.warn('⚠️ Iframe still loading, will update after load')
+        }
+      },
+      { deep: true, immediate: false }
+    )
+
+    // 监听组件配置变化，自动更新预览
+    watch(
+      () => editorStore.pageConfig.components,
+      () => {
+        updatePreview()
+      },
+      { deep: true }
+    )
+
     return {
+      editorStore,
       previewIframe,
       deviceMode,
       loading,
@@ -180,9 +299,9 @@ export default {
       handleRefresh,
       handleDragOver,
       handleDrop,
-      updatePreview
+      updatePreview,
     }
-  }
+  },
 }
 </script>
 
@@ -304,4 +423,3 @@ export default {
   color: #c0c4cc;
 }
 </style>
-

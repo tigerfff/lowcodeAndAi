@@ -24,7 +24,7 @@ export async function getAllComponents() {
             prop: '',
             label: '字段名',
             placeholder: '请输入',
-            clearable: true
+            clearable: true,
           },
           props: [
             {
@@ -32,38 +32,38 @@ export async function getAllComponents() {
               label: '字段名',
               type: 'string',
               required: true,
-              description: '绑定的数据字段名'
+              description: '绑定的数据字段名',
             },
             {
               name: 'label',
               label: '标签',
               type: 'string',
               required: true,
-              description: '显示的标签文本'
+              description: '显示的标签文本',
             },
             {
               name: 'placeholder',
               label: '占位符',
               type: 'string',
               default: '请输入',
-              description: '输入框占位文本'
+              description: '输入框占位文本',
             },
             {
               name: 'clearable',
               label: '可清空',
               type: 'boolean',
               default: true,
-              description: '是否显示清空按钮'
+              description: '是否显示清空按钮',
             },
             {
               name: 'disabled',
               label: '禁用',
               type: 'boolean',
               default: false,
-              description: '是否禁用'
-            }
+              description: '是否禁用',
+            },
           ],
-          events: ['input', 'change', 'blur', 'focus', 'clear']
+          events: ['input', 'change', 'blur', 'focus', 'clear'],
         },
         {
           name: 'el-select',
@@ -77,50 +77,50 @@ export async function getAllComponents() {
             label: '字段名',
             placeholder: '请选择',
             clearable: true,
-            multiple: false
+            multiple: false,
           },
           props: [
             {
               name: 'prop',
               label: '字段名',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'label',
               label: '标签',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'placeholder',
               label: '占位符',
               type: 'string',
-              default: '请选择'
+              default: '请选择',
             },
             {
               name: 'clearable',
               label: '可清空',
               type: 'boolean',
-              default: true
+              default: true,
             },
             {
               name: 'multiple',
               label: '多选',
               type: 'boolean',
               default: false,
-              description: '是否支持多选'
+              description: '是否支持多选',
             },
             {
               name: 'filterable',
               label: '可搜索',
               type: 'boolean',
               default: false,
-              description: '是否支持搜索'
-            }
+              description: '是否支持搜索',
+            },
           ],
           events: ['change', 'visible-change', 'remove-tag', 'clear'],
-          needsOptions: true // 标记此组件需要配置选项数据
+          needsOptions: true, // 标记此组件需要配置选项数据
         },
         {
           name: 'el-date-picker',
@@ -136,20 +136,20 @@ export async function getAllComponents() {
             'value-format': 'yyyy-MM-dd',
             'range-separator': '至',
             'start-placeholder': '开始日期',
-            'end-placeholder': '结束日期'
+            'end-placeholder': '结束日期',
           },
           props: [
             {
               name: 'prop',
               label: '字段名',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'label',
               label: '标签',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'type',
@@ -157,17 +157,17 @@ export async function getAllComponents() {
               type: 'select',
               options: ['date', 'daterange', 'datetime', 'datetimerange', 'month', 'year'],
               default: 'daterange',
-              description: '日期选择器类型'
+              description: '日期选择器类型',
             },
             {
               name: 'value-format',
               label: '值格式',
               type: 'string',
               default: 'yyyy-MM-dd',
-              description: '绑定值的格式'
-            }
+              description: '绑定值的格式',
+            },
           ],
-          events: ['change', 'blur', 'focus']
+          events: ['change', 'blur', 'focus'],
         },
         {
           name: 'el-cascader',
@@ -180,36 +180,36 @@ export async function getAllComponents() {
             prop: '',
             label: '字段名',
             placeholder: '请选择',
-            clearable: true
+            clearable: true,
           },
           props: [
             {
               name: 'prop',
               label: '字段名',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'label',
               label: '标签',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'placeholder',
               label: '占位符',
               type: 'string',
-              default: '请选择'
+              default: '请选择',
             },
             {
               name: 'clearable',
               label: '可清空',
               type: 'boolean',
-              default: true
-            }
+              default: true,
+            },
           ],
           events: ['change', 'expand-change', 'blur', 'focus'],
-          needsOptions: true
+          needsOptions: true,
         },
         {
           name: 'el-input-number',
@@ -223,44 +223,102 @@ export async function getAllComponents() {
             label: '字段名',
             placeholder: '请输入数字',
             min: 0,
-            max: 999999
+            max: 999999,
           },
           props: [
             {
               name: 'prop',
               label: '字段名',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'label',
               label: '标签',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'min',
               label: '最小值',
               type: 'number',
-              default: 0
+              default: 0,
             },
             {
               name: 'max',
               label: '最大值',
               type: 'number',
-              default: 999999
+              default: 999999,
             },
             {
               name: 'step',
               label: '步长',
               type: 'number',
-              default: 1
-            }
+              default: 1,
+            },
           ],
-          events: ['change', 'blur', 'focus']
-        }
+          events: ['change', 'blur', 'focus'],
+        },
       ],
       table: [
+        {
+          name: 'el-table',
+          label: '表格',
+          description: '数据表格',
+          icon: 'el-icon-s-grid',
+          category: 'table',
+          wrapper: null,
+          defaultProps: {
+            data: [],
+            border: true,
+            stripe: false,
+            size: 'small',
+          },
+          props: [
+            {
+              name: 'border',
+              label: '边框',
+              type: 'boolean',
+              default: true,
+              description: '是否带有纵向边框',
+            },
+            {
+              name: 'stripe',
+              label: '斑马纹',
+              type: 'boolean',
+              default: false,
+              description: '是否为斑马纹表格',
+            },
+            {
+              name: 'size',
+              label: '尺寸',
+              type: 'select',
+              options: ['medium', 'small', 'mini'],
+              default: 'small',
+              description: '表格的尺寸',
+            },
+            {
+              name: 'showHeader',
+              label: '显示表头',
+              type: 'boolean',
+              default: true,
+              description: '是否显示表头',
+            },
+            {
+              name: 'height',
+              label: '高度',
+              type: 'string',
+              description: 'Table 的高度，默认为自动高度',
+            },
+            {
+              name: 'maxHeight',
+              label: '最大高度',
+              type: 'string',
+              description: 'Table 的最大高度',
+            },
+          ],
+          slots: ['default', 'append'],
+        },
         {
           name: 'el-table-column',
           label: '表格列',
@@ -272,32 +330,32 @@ export async function getAllComponents() {
             prop: '',
             label: '列名',
             width: '',
-            sortable: false
+            sortable: false,
           },
           props: [
             {
               name: 'prop',
               label: '字段名',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'label',
               label: '列名',
               type: 'string',
-              required: true
+              required: true,
             },
             {
               name: 'width',
               label: '列宽',
               type: 'string',
-              description: '固定宽度，如 "120"'
+              description: '固定宽度，如 "120"',
             },
             {
               name: 'sortable',
               label: '可排序',
               type: 'boolean',
-              default: false
+              default: false,
             },
             {
               name: 'fixed',
@@ -305,11 +363,11 @@ export async function getAllComponents() {
               type: 'select',
               options: ['', 'left', 'right'],
               default: '',
-              description: '固定列的位置'
-            }
+              description: '固定列的位置',
+            },
           ],
-          slots: ['default', 'header']
-        }
+          slots: ['default', 'header'],
+        },
       ],
       action: [
         {
@@ -322,7 +380,7 @@ export async function getAllComponents() {
           defaultProps: {
             type: 'primary',
             text: '按钮',
-            size: 'small'
+            size: 'small',
           },
           props: [
             {
@@ -330,40 +388,40 @@ export async function getAllComponents() {
               label: '类型',
               type: 'select',
               options: ['primary', 'success', 'warning', 'danger', 'info', 'text'],
-              default: 'primary'
+              default: 'primary',
             },
             {
               name: 'text',
               label: '按钮文本',
               type: 'string',
               required: true,
-              default: '按钮'
+              default: '按钮',
             },
             {
               name: 'size',
               label: '尺寸',
               type: 'select',
               options: ['large', 'default', 'small', 'mini'],
-              default: 'small'
+              default: 'small',
             },
             {
               name: 'icon',
               label: '图标',
               type: 'string',
-              description: 'Element 图标类名'
+              description: 'Element 图标类名',
             },
             {
               name: 'disabled',
               label: '禁用',
               type: 'boolean',
-              default: false
-            }
+              default: false,
+            },
           ],
-          events: ['click']
-        }
-      ]
+          events: ['click'],
+        },
+      ],
     }
-    
+
     return components
   } catch (error) {
     console.error('Failed to load components:', error)
@@ -378,14 +436,14 @@ export async function getAllComponents() {
  */
 export async function getComponentByName(componentName) {
   const allComponents = await getAllComponents()
-  
+
   for (const category in allComponents) {
     const component = allComponents[category].find(c => c.name === componentName)
     if (component) {
       return component
     }
   }
-  
+
   return null
 }
 
@@ -407,18 +465,19 @@ export async function getComponentsByCategory(category) {
 export async function searchComponents(keyword) {
   const allComponents = await getAllComponents()
   const results = []
-  
+
   const lowerKeyword = keyword.toLowerCase()
-  
+
   for (const category in allComponents) {
-    const matched = allComponents[category].filter(comp =>
-      comp.label.toLowerCase().includes(lowerKeyword) ||
-      comp.description.toLowerCase().includes(lowerKeyword) ||
-      comp.name.toLowerCase().includes(lowerKeyword)
+    const matched = allComponents[category].filter(
+      comp =>
+        comp.label.toLowerCase().includes(lowerKeyword) ||
+        comp.description.toLowerCase().includes(lowerKeyword) ||
+        comp.name.toLowerCase().includes(lowerKeyword)
     )
     results.push(...matched)
   }
-  
+
   return results
 }
 
@@ -429,20 +488,20 @@ export async function searchComponents(keyword) {
  */
 export async function validateComponentConfig(componentConfig) {
   const errors = []
-  
+
   // 检查是否有组件名
   if (!componentConfig.component) {
     errors.push('组件名称不能为空')
     return { valid: false, errors }
   }
-  
+
   // 获取组件元数据
   const componentMeta = await getComponentByName(componentConfig.component)
   if (!componentMeta) {
     errors.push(`未找到组件: ${componentConfig.component}`)
     return { valid: false, errors }
   }
-  
+
   // 检查必需属性
   const requiredProps = componentMeta.props?.filter(p => p.required) || []
   for (const prop of requiredProps) {
@@ -450,10 +509,10 @@ export async function validateComponentConfig(componentConfig) {
       errors.push(`缺少必需属性: ${prop.label || prop.name}`)
     }
   }
-  
+
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -464,17 +523,16 @@ export async function validateComponentConfig(componentConfig) {
  */
 export async function getDefaultConfig(componentName) {
   const component = await getComponentByName(componentName)
-  
+
   if (!component) {
     return null
   }
-  
+
   return {
     component: componentName,
     wrapper: component.wrapper,
     props: { ...component.defaultProps },
     apiBindings: [],
-    aiPrompt: null
+    aiPrompt: null,
   }
 }
-
