@@ -6,6 +6,7 @@
     
     <h-page-content>
       <h-page-search ref="filters" :model="filters">
+        <slot>
         {{#each searchFields}}
         <h-page-search-item label="{{label}}" prop="{{prop}}">
           {{#if (eq type 'input')}}
