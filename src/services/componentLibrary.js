@@ -422,10 +422,13 @@ export async function getAllComponents() {
       ],
     }
 
-    return components
+    // 将对象转换为扁平数组
+    const allComponents = [...components.search, ...components.table, ...components.action]
+
+    return allComponents
   } catch (error) {
     console.error('Failed to load components:', error)
-    return { search: [], table: [], action: [] }
+    return []
   }
 }
 
@@ -436,15 +439,7 @@ export async function getAllComponents() {
  */
 export async function getComponentByName(componentName) {
   const allComponents = await getAllComponents()
-
-  for (const category in allComponents) {
-    const component = allComponents[category].find(c => c.name === componentName)
-    if (component) {
-      return component
-    }
-  }
-
-  return null
+  return allComponents.find(c => c.name === componentName) || null
 }
 
 /**
@@ -454,7 +449,7 @@ export async function getComponentByName(componentName) {
  */
 export async function getComponentsByCategory(category) {
   const allComponents = await getAllComponents()
-  return allComponents[category] || []
+  return allComponents.filter(c => c.category === category)
 }
 
 /**
@@ -464,21 +459,14 @@ export async function getComponentsByCategory(category) {
  */
 export async function searchComponents(keyword) {
   const allComponents = await getAllComponents()
-  const results = []
-
   const lowerKeyword = keyword.toLowerCase()
 
-  for (const category in allComponents) {
-    const matched = allComponents[category].filter(
-      comp =>
-        comp.label.toLowerCase().includes(lowerKeyword) ||
-        comp.description.toLowerCase().includes(lowerKeyword) ||
-        comp.name.toLowerCase().includes(lowerKeyword)
-    )
-    results.push(...matched)
-  }
-
-  return results
+  return allComponents.filter(
+    comp =>
+      comp.label.toLowerCase().includes(lowerKeyword) ||
+      comp.description.toLowerCase().includes(lowerKeyword) ||
+      comp.name.toLowerCase().includes(lowerKeyword)
+  )
 }
 
 /**

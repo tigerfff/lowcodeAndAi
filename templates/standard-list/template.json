@@ -1,21 +1,50 @@
 {
   "id": "standard-list",
   "label": "标准列表页",
-  "description": "带搜索的表格列表，适用于数据查询、管理场景。包含搜索栏、数据表格和分页器。",
+  "description": "带搜索区、操作区和表格的标准列表页面。",
   "preview": "templates/standard-list/preview.png",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "AI Code Generator",
   "layout": {
     "structure": "fixed",
     "template": "page.vue.hbs",
-    "description": "固定布局结构：容器 → 头部 → 内容（搜索 + 表格 + 分页）",
-    "components": {
-      "root": "h-page-container",
-      "header": "h-page-header",
-      "content": "h-page-content",
-      "search": "h-page-search + h-page-search-item",
-      "table": "h-page-table > el-table > el-table-column",
-      "pagination": "el-pagination"
+    "description": "固定布局结构：容器 → 头部 → 内容（搜索区 + 操作区 + 表格 + 分页）"
+  },
+  "slots": {
+    "searchArea": {
+      "label": "搜索区",
+      "description": "位于页面顶部的搜索条件区域，可添加 0~8 个搜索组件。",
+      "maxCount": 8,
+      "allowedComponents": [
+        "el-input",
+        "el-select",
+        "el-date-picker",
+        "el-cascader",
+        "el-autocomplete",
+        "area-selector",
+        "team-selector",
+        "user-selector"
+      ],
+      "wrapper": "h-page-search-item"
+    },
+    "actionArea": {
+      "label": "操作区",
+      "description": "搜索区下方的操作按钮区域，可添加 0~6 个操作组件。",
+      "maxCount": 6,
+      "allowedComponents": [
+        "el-button",
+        "el-dropdown",
+        "action-group",
+        "batch-selector"
+      ]
+    },
+    "tableColumns": {
+      "label": "表格列",
+      "description": "数据表格列配置，至少包含 1 列。",
+      "minCount": 1,
+      "allowedComponents": [
+        "el-table-column"
+      ]
     }
   },
   "previewLayout": {
@@ -44,7 +73,16 @@
               "slots": {
                 "default": "searchArea"
               },
-              "emptyText": "拖拽搜索组件到这里"
+              "emptyText": "可在此添加搜索组件"
+            },
+            {
+              "component": "h-page-action",
+              "class": "drop-zone",
+              "dropZone": "action",
+              "slots": {
+                "default": "actionArea"
+              },
+              "emptyText": "可在此添加操作按钮"
             },
             {
               "component": "h-page-table",
@@ -53,10 +91,6 @@
               "props": {
                 "fixedHeight": true
               },
-              "slots": {
-                "pageTableAction": "actionArea"
-              },
-              "emptyText": "拖拽操作按钮到这里",
               "children": [
                 {
                   "component": "el-table",
@@ -66,38 +100,16 @@
                     "border": true,
                     "size": "small"
                   },
-                  "children": [
-                    {
-                      "component": "el-table-column",
-                      "props": {
-                        "prop": "id",
-                        "label": "ID",
-                        "width": "180"
-                      }
-                    },
-                    {
-                      "component": "el-table-column",
-                      "props": {
-                        "prop": "name",
-                        "label": "名称",
-                        "width": "180"
-                      }
-                    },
-                    {
-                      "component": "el-table-column",
-                      "props": {
-                        "prop": "status",
-                        "label": "状态",
-                        "width": "100"
-                      }
-                    }
-                  ]
+                  "slots": {
+                    "default": "tableColumns"
+                  },
+                  "emptyText": "配置表格列"
                 },
                 {
                   "component": "el-pagination",
                   "slot": "pagination",
                   "props": {
-                    "layout": "total, prev, pager, next",
+                    "layout": "total, sizes, prev, pager, next, jumper",
                     "total": 0
                   }
                 }
@@ -109,70 +121,24 @@
     }
   },
   "aiTasks": [
-    "从 API 响应推断表格列配置（字段名、显示标签、数据类型、列宽、格式化）",
-    "从 API 请求参数推断搜索字段配置（字段名、控件类型、默认值、选项数据源）",
+    "从业务需求或 API 文档推断搜索区组件配置（类型、标签、默认值、校验规则）",
+    "根据功能描述推断操作区按钮配置（类型、文案、事件处理）",
+    "从 API 响应推断表格列配置（字段名、显示标签、数据类型、宽度、格式化）",
     "推断数据路径映射（列表数据路径 dataPath、总数路径 totalPath）",
     "推断分页参数映射（pageNo/pageSize 或其变体如 current/size、page/limit）",
-    "识别枚举字段并推断下拉选项来源",
-    "识别日期字段并推断日期选择器类型（date/datetime/daterange）",
-    "为低置信度推断项标注 confidence < 0.8"
-  ],
-  "dataflows": {
-    "description": "数据流配置，定义 API 请求/响应的数据映射规则",
-    "pagination": {
-      "description": "分页参数配置，按优先级尝试匹配",
-      "requestParams": {
-        "pageNo": ["pageNo", "current", "page", "pageNum"],
-        "pageSize": ["pageSize", "size", "limit", "pageLimit"]
-      },
-      "defaultValues": {
-        "pageNo": 1,
-        "pageSize": 20
-      }
-    },
-    "response": {
-      "description": "响应数据路径配置，按优先级尝试提取",
-      "dataPath": [
-        "data.rows",
-        "data.items",
-        "data.list",
-        "data.records",
-        "rows",
-        "items",
-        "list",
-        "records",
-        "data"
+    "识别组件间依赖关系（如区域选择器 → 团队选择器）并生成事件绑定",
+    "为低置信度推断项提供提示与确认"
       ],
-      "totalPath": [
-        "data.total",
-        "data.totalRecord",
-        "data.totalCount",
-        "total",
-        "totalRecord",
-        "totalCount",
-        "count"
-      ]
-    },
-    "searchFields": {
-      "description": "搜索字段类型映射规则",
-      "typeMapping": {
-        "string": "input",
-        "number": "input",
-        "enum": "select",
-        "boolean": "select",
-        "date": "date-picker",
-        "datetime": "date-picker",
-        "daterange": "date-picker"
-      }
-    }
-  },
   "componentDefaults": {
     "h-page-search": {
       "label-position": "top"
     },
+    "h-page-table": {
+      "fixedHeight": true
+    },
     "el-table": {
       "stripe": true,
-      "show-overflow-title": true
+      "show-overflow-tooltip": true
     },
     "el-pagination": {
       "layout": "total, sizes, prev, pager, next, jumper",
@@ -182,8 +148,12 @@
   "configSchema": {
     "description": "页面配置 JSON Schema，用于验证 AI 输出",
     "type": "object",
-    "required": ["pageName", "api", "columns", "dataMapping"],
+    "required": ["templateId", "pageName", "api"],
     "properties": {
+      "templateId": {
+        "type": "string",
+        "enum": ["standard-list"]
+      },
       "pageName": {
         "type": "string",
         "description": "页面名称，用于生成组件名"
@@ -206,73 +176,96 @@
           "importPath": { "type": "string" }
         }
       },
-      "searchFields": {
+      "slots": {
+        "type": "object",
+        "properties": {
+          "searchArea": {
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["prop", "label", "type"],
+              "required": ["component"],
           "properties": {
-            "prop": { "type": "string" },
+                "id": { "type": "string" },
+                "component": { "type": "string" },
+                "model": { "type": "string" },
             "label": { "type": "string" },
-            "type": { "type": "string", "enum": ["input", "select", "daterange", "date", "datetime"] },
             "defaultValue": {},
-            "placeholder": { "type": "string" },
-            "options": {
-              "type": "object",
-              "properties": {
-                "static": { "type": "array" },
-                "apiPath": { "type": "string" },
-                "valueKey": { "type": "string" },
-                "labelKey": { "type": "string" }
+                "props": { "type": "object" },
+                "events": { "type": "object" },
+                "options": { "type": "object" },
+                "wrapperProps": { "type": "object" }
               }
-            },
-            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          },
+          "actionArea": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["component"],
+              "properties": {
+                "id": { "type": "string" },
+                "component": { "type": "string" },
+                "text": { "type": "string" },
+                "props": { "type": "object" },
+                "events": { "type": "object" }
           }
         }
       },
-      "columns": {
+          "tableColumns": {
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["prop", "label"],
+              "required": ["component", "props"],
+              "properties": {
+                "id": { "type": "string" },
+                "component": { "type": "string", "enum": ["el-table-column"] },
+                "props": {
+                  "type": "object",
+                  "required": ["label"],
           "properties": {
             "prop": { "type": "string" },
             "label": { "type": "string" },
             "width": { "type": ["string", "number"] },
-            "type": { "type": "string", "enum": ["text", "number", "datetime", "date", "tag", "custom"] },
+                    "minWidth": { "type": ["string", "number"] },
+                    "type": { "type": "string" },
             "formatter": { "type": "string" },
-            "customRender": { "type": "string" },
-            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+                    "align": { "type": "string" },
+                    "fixed": { "type": ["string", "boolean"] }
+                  }
+                },
+                "customRender": { "type": "string" }
+              }
+            }
           }
+        }
+      },
+      "table": {
+        "type": "object",
+        "description": "表格级别配置（props/events）",
+        "properties": {
+          "props": { "type": "object" },
+          "events": { "type": "object" }
         }
       },
       "dataMapping": {
         "type": "object",
-        "required": ["dataPath", "totalPath"],
+        "description": "主数据接口返回数据的路径映射配置",
         "properties": {
-          "dataPath": { "type": "string", "description": "如 'data.rows' 或 '(json) => json.data.rows'" },
-          "totalPath": { "type": "string", "description": "如 'data.total' 或 '(json) => json.data.total'" },
-          "pageNoField": { "type": "string", "default": "pageNo" },
-          "pageSizeField": { "type": "string", "default": "pageSize" }
+          "dataPath": { "type": "string", "default": "data.rows" },
+          "totalPath": { "type": "string", "default": "data.total" }
         }
       },
-      "operationColumn": {
+      "pagination": {
         "type": "object",
-        "description": "操作列配置（可选）",
+        "description": "分页配置",
         "properties": {
-          "label": { "type": "string", "default": "操作" },
-          "width": { "type": ["string", "number"] },
-          "fixed": { "type": "string", "enum": ["left", "right"] },
-          "buttons": {
+          "enabled": { "type": "boolean", "default": true },
+          "pageNoField": { "type": "string", "default": "pageNo" },
+          "pageSizeField": { "type": "string", "default": "pageSize" },
+          "pageSizes": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "label": { "type": "string" },
-                "type": { "type": "string" },
-                "action": { "type": "string" }
-              }
-            }
+            "items": { "type": "number" },
+            "default": [10, 20, 50, 100]
           }
         }
       }
@@ -281,49 +274,106 @@
   "examples": [
     {
       "name": "用户列表",
-      "description": "典型的用户管理列表页",
+      "description": "包含搜索、操作按钮和数据表格的典型用户列表页",
       "config": {
+        "templateId": "standard-list",
         "pageName": "UserList",
         "breadcrumb": ["首页", "用户管理", "用户列表"],
         "api": {
           "url": "/api/user/list",
           "method": "POST"
         },
-        "searchFields": [
+        "slots": {
+          "searchArea": [
           {
-            "prop": "userName",
+              "id": "search_userName",
+              "component": "el-input",
+              "model": "userName",
             "label": "用户名",
-            "type": "input",
+              "defaultValue": "",
+              "props": {
             "placeholder": "请输入用户名",
-            "defaultValue": ""
+                "clearable": true
+              }
           },
           {
-            "prop": "status",
+              "id": "search_status",
+              "component": "el-select",
+              "model": "status",
             "label": "状态",
-            "type": "select",
             "defaultValue": "",
-            "options": {
-              "static": [
-                { "value": "1", "label": "启用" },
-                { "value": "0", "label": "禁用" }
+              "props": {
+                "placeholder": "请选择状态",
+                "clearable": true,
+                "options": [
+                  { "label": "启用", "value": "1" },
+                  { "label": "禁用", "value": "0" }
               ]
             }
           }
         ],
-        "columns": [
-          { "prop": "userName", "label": "用户名", "width": "150" },
-          { "prop": "phone", "label": "手机号", "width": "120" },
-          { "prop": "email", "label": "邮箱", "width": "200" },
-          { "prop": "createTime", "label": "创建时间", "width": "180", "type": "datetime" }
-        ],
+          "actionArea": [
+            {
+              "id": "action_search",
+              "component": "el-button",
+              "text": "查询",
+              "props": {
+                "type": "primary"
+              },
+              "events": {
+                "click": "handleSearch"
+              }
+            },
+            {
+              "id": "action_reset",
+              "component": "el-button",
+              "text": "重置",
+              "events": {
+                "click": "handleReset"
+              }
+            }
+          ],
+          "tableColumns": [
+            {
+              "id": "column_userName",
+              "component": "el-table-column",
+              "props": {
+                "prop": "userName",
+                "label": "用户名",
+                "minWidth": 150
+              }
+            },
+            {
+              "id": "column_phone",
+              "component": "el-table-column",
+              "props": {
+                "prop": "phone",
+                "label": "手机号",
+                "minWidth": 120
+              }
+            },
+            {
+              "id": "column_createTime",
+              "component": "el-table-column",
+              "props": {
+                "prop": "createTime",
+                "label": "创建时间",
+                "minWidth": 180
+              }
+            }
+          ]
+        },
         "dataMapping": {
           "dataPath": "data.rows",
-          "totalPath": "data.total",
+          "totalPath": "data.total"
+        },
+        "pagination": {
+          "enabled": true,
           "pageNoField": "pageNo",
-          "pageSizeField": "pageSize"
+          "pageSizeField": "pageSize",
+          "pageSizes": [10, 20, 50, 100]
         }
       }
     }
   ]
 }
-

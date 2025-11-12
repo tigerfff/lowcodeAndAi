@@ -1,533 +1,496 @@
 /**
  * 代码生成器
- * 负责根据配置生成 Vue2 SFC 代码，包括 AI Prompt 构造
+ * 负责根据配置生成 Vue3 SFC 代码，支持 Handlebars 模板渲染和 AI 集成
  */
 
+import Handlebars from 'handlebars'
 import { getTemplateById } from './templateManager.js'
 import { getComponentByName } from './componentLibrary.js'
+import { callAIGenerate } from './aiService.js'
+
+// 注册 Handlebars Helpers
+Handlebars.registerHelper('kebabCase', str => {
+  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
+})
+
+Handlebars.registerHelper('pascalCase', str => {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+})
+
+Handlebars.registerHelper('camelCase', str => {
+  return str.charAt(0).toLowerCase() + str.slice(1)
+})
+
+Handlebars.registerHelper('eq', (a, b) => a === b)
+
+Handlebars.registerHelper('json', context => {
+  return JSON.stringify(context)
+})
+
+Handlebars.registerHelper('startsWith', (str, prefix) => {
+  return str && str.startsWith(prefix)
+})
 
 /**
  * 生成完整的 Vue2 SFC 代码
  * @param {Object} config - 页面配置
  * @param {Object} options - 生成选项
- * @returns {Promise<Object>} 生成结果 { code, prompt, metadata }
+ * @returns {Promise<Object>} 生成结果
  */
 export async function generateCode(config, options = {}) {
   try {
-    const { template, pageInfo, components, globalAiPrompt } = config
-    
-    // 1. 生成 AI Prompt
-    const prompt = await buildAIPrompt(config)
-    
-    // 2. 如果启用 AI，则调用 AI 生成
-    if (options.useAI) {
-      const aiCode = await generateWithAI(prompt, config)
-      if (aiCode) {
-        return {
-          success: true,
-          code: aiCode,
+    console.log('🚀 Starting code generation...', config)
+
+    // 1. 加载模板定义
+    const template = await getTemplateById(config.templateId)
+    if (!template) {
+      throw new Error(`Template not found: ${config.templateId}`)
+    }
+
+    // 2. 构建 AI Prompt
+    const prompt = await buildAIPrompt(config, template)
+
+    let code = null
+    let method = 'template'
+    let aiError = null
+
+    // 3. 优先使用 AI 生成
+    if (options.useAI && config.aiConfig) {
+      try {
+        console.log('🤖 Attempting AI generation...')
+        code = await callAIGenerate({
           prompt,
-          method: 'ai',
-          metadata: {
-            template: template?.id,
-            componentCount: countComponents(components),
-            timestamp: new Date().toISOString()
-          }
-        }
+          aiConfig: config.aiConfig,
+        })
+        method = 'ai'
+        console.log('✅ AI generation successful')
+      } catch (error) {
+        console.warn('⚠️ AI generation failed, will fallback to template:', error)
+        aiError = error.message
       }
     }
-    
-    // 3. 降级：使用模板生成
-    const templateCode = await generateWithTemplate(config)
-    
+
+    // 4. Fallback: 使用 Handlebars 模板生成代码
+    if (!code) {
+      console.log('📋 Using Handlebars template fallback...')
+      code = await generateWithTemplate(config, template)
+      method = 'template'
+    }
+
+    // 5. 验证生成的代码
+    const validation = validateCode(code)
+    if (!validation.valid) {
+      console.warn('⚠️ Code validation warnings:', validation.issues)
+    }
+
     return {
       success: true,
-      code: templateCode,
+      code,
       prompt,
-      method: 'template',
+      method,
+      aiError,
+      validation,
       metadata: {
-        template: template?.id,
-        componentCount: countComponents(components),
-        timestamp: new Date().toISOString()
-      }
+        templateId: config.templateId,
+        pageName: config.pageName,
+        componentCount: countComponents(config.slots),
+        apiCount: config.apiConfigs?.length || 0,
+        timestamp: new Date().toISOString(),
+      },
     }
   } catch (error) {
-    console.error('Code generation failed:', error)
+    console.error('❌ Code generation failed:', error)
     return {
       success: false,
       error: error.message,
       code: null,
-      prompt: null
+      prompt: null,
     }
+  }
+}
+
+/**
+ * 使用 Handlebars 模板生成代码
+ * @param {Object} config - 页面配置
+ * @param {Object} template - 模板定义
+ * @returns {Promise<string>} 生成的代码
+ */
+async function generateWithTemplate(config, template) {
+  try {
+    // 1. 读取 Handlebars 模板文件
+    const templatePath = `/templates/${template.id}/page.vue.hbs`
+    const response = await fetch(templatePath)
+    if (!response.ok) {
+      throw new Error(`Failed to load template file: ${templatePath}`)
+    }
+    const templateSource = await response.text()
+
+    // 2. 编译模板
+    const compiledTemplate = Handlebars.compile(templateSource)
+
+    // 3. 准备模板数据 - 将 slots 转换为 searchFields/columns 格式
+    const searchFields = (config.slots?.searchArea || []).map(comp => {
+      // 推断组件类型
+      let type = 'input'
+      if (comp.component === 'el-select') type = 'select'
+      else if (comp.component === 'el-date-picker') {
+        // 根据 props 判断具体类型
+        if (comp.props?.type === 'daterange') type = 'daterange'
+        else if (comp.props?.type === 'datetime') type = 'datetime'
+        else type = 'date'
+      }
+
+      return {
+        prop: comp.model || comp.id || 'field',
+        label: comp.label || '字段',
+        type,
+        placeholder: comp.props?.placeholder || '',
+        defaultValue: comp.defaultValue || '',
+        options: comp.props?.options || null,
+      }
+    })
+
+    const columns = (config.slots?.tableColumns || []).map(col => ({
+      prop: col.props?.prop || 'field',
+      label: col.props?.label || '列',
+      width: col.props?.width || null,
+      minWidth: col.props?.minWidth || null,
+      formatter: col.props?.formatter || null,
+      customRender: col.customRender || null,
+    }))
+
+    // 检查是否有下拉选项需要提取
+    const selectOptions = []
+    let hasSelectOptions = false
+    searchFields.forEach(field => {
+      if (field.type === 'select' && field.options && field.options.static) {
+        hasSelectOptions = true
+        selectOptions.push({
+          varName: `${field.prop}Options`,
+          options: field.options.static,
+        })
+        // 更新 options 引用
+        field.options = {
+          varName: `${field.prop}Options`,
+          valueKey: field.options.valueKey || 'value',
+          labelKey: field.options.labelKey || 'label',
+        }
+      }
+    })
+
+    const templateData = {
+      // 基本信息
+      pageName: config.pageName,
+      description: config.description || '',
+      breadcrumb: config.breadcrumb || [],
+
+      // API 配置
+      api: config.api || {},
+
+      // 搜索字段
+      searchFields,
+      hasSelectOptions,
+      selectOptions,
+
+      // 表格列
+      columns,
+
+      // 操作列（可选）
+      operationColumn: config.operationColumn || null,
+
+      // 数据映射配置
+      dataMapping: config.dataMapping || {
+        dataPath: 'data.rows',
+        totalPath: 'data.total',
+        pageNoField: 'pageNo',
+        pageSizeField: 'pageSize',
+      },
+    }
+
+    // 4. 渲染模板
+    const code = compiledTemplate(templateData)
+
+    console.log('✅ Template rendered successfully')
+    return code
+  } catch (error) {
+    console.error('Template rendering error:', error)
+    throw new Error(`Template rendering failed: ${error.message}`)
   }
 }
 
 /**
  * 构建 AI Prompt
  * @param {Object} config - 页面配置
+ * @param {Object} template - 模板定义
  * @returns {Promise<string>} AI Prompt
  */
-export async function buildAIPrompt(config) {
-  const { template, pageInfo, components, globalAiPrompt } = config
-  
+async function buildAIPrompt(config, template) {
+  const templatePath = `/templates/${template.id}/page.vue.hbs`
+  const examplePath = `/templates/${template.id}/list.vue`
+
+  let templateSource = ''
+  let exampleSource = ''
+
+  try {
+    const response = await fetch(templatePath)
+    if (response.ok) {
+      templateSource = await response.text()
+    }
+  } catch (error) {
+    console.warn('Failed to load template for prompt:', error)
+  }
+
+  try {
+    const response = await fetch(examplePath)
+    if (response.ok) {
+      exampleSource = await response.text()
+    }
+  } catch (error) {
+    console.warn('Failed to load example page for prompt:', error)
+  }
+
   let prompt = `# Vue2 页面代码生成任务
 
-## 基本信息
-- 组件名称: ${pageInfo.name || 'GeneratedPage'}
-- 页面标题: ${pageInfo.title || '未命名页面'}
-- 面包屑: ${pageInfo.breadcrumb.join(' > ') || '无'}
-- 模板: ${template?.label || '标准列表页'}
+## 一、基础信息
+- 页面名称: ${config.pageName || 'GeneratedPage'}
+- 页面描述: ${config.description || config.pageInfo?.title || '未提供'}
+- 面包屑: ${config.breadcrumb?.join(' > ') || (config.pageInfo?.breadcrumb || []).join(' > ') || '无'}
+- 模板类型: ${template.label} (${template.id})
 
-## 全局业务逻辑
-${globalAiPrompt || '无特殊业务逻辑'}
+## 二、模板说明
+${template.description || ''}
 
-## 模板结构
-模板使用 hui-pro 组件库的智能容器组件：
+模板布局结构：
 - h-page-container: 页面容器
-- h-page-header: 页面头部（含面包屑、标题）
-- h-page-content: 页面内容区
-- h-page-search: 搜索区（自适应布局，支持高低频切换）
-- h-page-table: 表格区（固定表头、分页）
-
+  - h-page-header: 页面头部（面包屑）
+  - h-page-content: 页面内容
+    - h-page-search: 搜索区（可选）
+    - h-page-action: 操作区（可选）
+    - h-page-table: 表格区（包含分页）
 `
-  
-  // 添加搜索区组件配置
-  if (components.searchArea && components.searchArea.length > 0) {
-    prompt += `\n## 搜索区组件 (${components.searchArea.length}个)\n\n`
-    
-    for (const comp of components.searchArea) {
-      const componentMeta = await getComponentByName(comp.component)
-      prompt += `### ${comp.props.label || comp.component}\n`
-      prompt += `- 组件类型: ${comp.component}\n`
-      prompt += `- 字段名: ${comp.props.prop}\n`
-      prompt += `- 包装器: ${comp.wrapper || '无'}\n`
-      
-      // 属性
-      prompt += `- 属性配置:\n`
-      for (const [key, value] of Object.entries(comp.props)) {
-        if (key !== 'prop' && key !== 'label') {
-          prompt += `  - ${key}: ${JSON.stringify(value)}\n`
-        }
-      }
-      
-      // 接口绑定
-      if (comp.apiBindings && comp.apiBindings.length > 0) {
-        prompt += `- 接口绑定 (${comp.apiBindings.length}个):\n`
-        for (let i = 0; i < comp.apiBindings.length; i++) {
-          const api = comp.apiBindings[i]
-          prompt += `  ${i + 1}. ${api.purpose || '未指定用途'}\n`
-          prompt += `     - URL: ${api.url}\n`
-          prompt += `     - 方法: ${api.method}\n`
-          prompt += `     - 触发时机: ${api.trigger}\n`
-          if (api.transform) {
-            prompt += `     - 数据转换: ${api.transform}\n`
-          }
-        }
-      }
-      
-      // AI 提示词
-      if (comp.aiPrompt) {
-        prompt += `- AI 提示: ${comp.aiPrompt}\n`
-      }
-      
+
+  if (exampleSource) {
+    prompt += `
+## 三、参考示例页面（推荐模仿结构与写法）
+\`\`\`vue
+${exampleSource}
+\`\`\`
+`
+  } else if (templateSource) {
+    prompt += `
+## 三、模板结构参考（Handlebars 模板）
+\`\`\`vue
+${templateSource}
+\`\`\`
+`
+  }
+
+  prompt += `
+**重要：请严格参考上述结构和风格！**
+`
+
+  // 添加组件配置信息
+  if (config.slots) {
+    prompt += `\n## 四、组件配置\n\n`
+
+    if (config.slots.searchArea && config.slots.searchArea.length > 0) {
+      prompt += `### 搜索区组件 (${config.slots.searchArea.length}个)\n\n`
+      config.slots.searchArea.forEach((comp, index) => {
+        prompt += `${index + 1}. ${comp.component}`
+        if (comp.label) prompt += ` - 标签: ${comp.label}`
+        if (comp.model) prompt += ` - 字段: ${comp.model}`
+        prompt += '\n'
+      })
+      prompt += '\n'
+    }
+
+    if (config.slots.actionArea && config.slots.actionArea.length > 0) {
+      prompt += `### 操作区组件 (${config.slots.actionArea.length}个)\n\n`
+      config.slots.actionArea.forEach((comp, index) => {
+        prompt += `${index + 1}. ${comp.component}`
+        if (comp.label) prompt += ` - 文字: ${comp.label}`
+        prompt += '\n'
+      })
+      prompt += '\n'
+    }
+
+    if (config.slots.tableColumns && config.slots.tableColumns.length > 0) {
+      prompt += `### 表格列 (${config.slots.tableColumns.length}个)\n\n`
+      config.slots.tableColumns.forEach((col, index) => {
+        prompt += `${index + 1}. ${col.props?.label || '列' + (index + 1)}`
+        if (col.props?.prop) prompt += ` - 字段: ${col.props.prop}`
+        prompt += '\n'
+      })
       prompt += '\n'
     }
   }
-  
-  // 添加操作按钮配置
-  if (components.actionArea && components.actionArea.length > 0) {
-    prompt += `\n## 操作按钮 (${components.actionArea.length}个)\n\n`
-    
-    for (const comp of components.actionArea) {
-      prompt += `### ${comp.props.text || comp.component}\n`
-      prompt += `- 组件类型: ${comp.component}\n`
-      prompt += `- 按钮文本: ${comp.props.text}\n`
-      prompt += `- 按钮类型: ${comp.props.type}\n`
-      
-      // 接口绑定
-      if (comp.apiBindings && comp.apiBindings.length > 0) {
-        prompt += `- 接口绑定:\n`
-        for (const api of comp.apiBindings) {
-          prompt += `  - ${api.purpose}: ${api.method} ${api.url}\n`
-        }
+
+  // 添加 API 配置（多个）
+  if (config.apiConfigs && config.apiConfigs.length > 0) {
+    prompt += `\n## 五、API 接口配置\n\n`
+    config.apiConfigs.forEach((api, index) => {
+      prompt += `### API ${index + 1}: ${api.name || 'API'}\n`
+      prompt += `- 接口地址: ${api.method} ${api.url}\n`
+      if (api.description) {
+        prompt += `- 用途: ${api.description}\n`
       }
-      
-      // AI 提示词
-      if (comp.aiPrompt) {
-        prompt += `- AI 提示: ${comp.aiPrompt}\n`
+      if (api.requestExample) {
+        prompt += `\n**请求参数示例:**\n\`\`\`json\n${api.requestExample}\n\`\`\`\n`
       }
-      
+      if (api.responseExample) {
+        prompt += `\n**响应示例:**\n\`\`\`json\n${api.responseExample}\n\`\`\`\n`
+      }
       prompt += '\n'
-    }
+    })
   }
-  
-  // 添加表格配置
-  if (components.tableArea) {
-    prompt += `\n## 表格配置\n\n`
-    prompt += `- 使用 h-page-table 组件（自动处理固定表头、滚动条、分页）\n`
-    prompt += `- 表格数据通过接口获取\n\n`
-  }
-  
-  // 代码生成要求
-  prompt += `\n## 代码生成要求
 
-### Template 部分
-1. 使用 hui-pro 组件库的智能容器组件
-2. h-page-search 内的搜索项使用 h-page-search-item 包装
-3. 搜索区末尾添加"查询"和"重置"按钮
-4. 表格使用 el-table，数据绑定到 tableData
-5. 分页组件使用 el-pagination
+  prompt += `\n## 六、生成要求
 
-### Script 部分
-1. 使用 Vue2 Options API 语法
-2. data() 返回：
-   - searchForm: 搜索表单数据对象（包含所有搜索字段）
-   - tableData: 表格数据数组
-   - pagination: 分页信息 { current: 1, pageSize: 10, total: 0 }
-   - loading: 加载状态
-3. methods 包含：
-   - handleSearch(): 处理搜索，重置到第一页
-   - handleReset(): 重置搜索表单
-   - fetchData(): 获取表格数据（根据接口配置）
-   - handleSizeChange(size): 每页条数改变
-   - handleCurrentChange(page): 当前页改变
-   - 其他根据组件配置生成的方法
-4. mounted() 钩子：调用 fetchData() 初始化数据
+### 技术规范
+- Vue 2 Options API（使用 <script>，不使用 <script setup>）
+- 使用 hui2.43.2 基础组件（el-input, el-select, el-button, el-table, etc）
+- 使用 hui-pro 页面组件（h-page-container, h-page-search, h-page-table, etc）
+- 使用 data() 返回数据
+- 使用 methods 定义方法
+- 使用 mounted() 生命周期
 
-### 接口调用
-1. 根据组件的 apiBindings 配置生成相应的接口调用代码
-2. 使用 axios 或 this.$http 发送请求
-3. 处理接口返回数据，根据 transform 配置进行数据转换
-4. 搜索条件需要根据配置转换为接口参数格式
+### 代码生成任务
+1. **根据 API JSON 示例推断：**
+   - 搜索组件的字段名、标签、占位符、默认值
+   - 表格列的字段名、标签、宽度
+   - 数据映射路径（data.rows, data.total 等）
+   - 分页参数字段名（pageNo, pageSize 等）
 
-### 样式部分
-1. 使用 scoped 样式
-2. 保持简洁，依赖 hui-pro 组件的内置样式
+2. **生成完整代码：**
+   - 完整的 <template> 部分（严格参考 Handlebars 模板结构）
+   - 完整的 <script> 部分（包含 data, methods, mounted）
+   - 完整的 <style scoped> 部分
 
-请生成完整的 Vue2 SFC 代码（包含 <template>、<script>、<style> 三部分）。
+3. **功能实现：**
+   - 页面加载时自动调用查询接口
+   - 搜索按钮触发查询，重置分页到第一页
+   - 重置按钮清空搜索条件并查询
+   - 分页器变化时自动查询
+   - 表格数据为空时显示空状态
+
+### 输出格式
+**直接输出完整的 .vue 单文件组件代码，不要有任何额外的解释或说明！**
 `
-  
+
+  if (config.customPrompt) {
+    prompt += `\n## 七、额外提示
+\n${config.customPrompt}\n`
+  }
+
   return prompt
 }
 
 /**
- * 使用 AI 生成代码
- * @param {string} prompt - AI Prompt
- * @param {Object} config - 页面配置
- * @returns {Promise<string|null>} 生成的代码
- */
-async function generateWithAI(prompt, config) {
-  try {
-    // TODO: 接入 AI 服务
-    // 这里应该调用 AI API（如 OpenAI、Claude 等）
-    // 目前返回 null，表示 AI 未实现，会降级到模板生成
-    
-    console.log('AI generation not implemented yet, falling back to template')
-    return null
-    
-    // 示例代码（需要配置 AI API）:
-    // const response = await fetch('/api/ai/generate', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ prompt, config })
-    // })
-    // const result = await response.json()
-    // return result.code
-  } catch (error) {
-    console.error('AI generation error:', error)
-    return null
-  }
-}
-
-/**
- * 使用模板生成代码
- * @param {Object} config - 页面配置
- * @returns {Promise<string>} 生成的代码
- */
-async function generateWithTemplate(config) {
-  const { template, pageInfo, components } = config
-  
-  // 生成 template 部分
-  const templateHTML = generateTemplateSection(template, pageInfo, components)
-  
-  // 生成 script 部分
-  const scriptContent = generateScriptSection(pageInfo, components)
-  
-  // 生成 style 部分
-  const styleContent = generateStyleSection()
-  
-  return `<template>
-${templateHTML}
-</template>
-
-<script>
-${scriptContent}
-</script>
-
-<style scoped>
-${styleContent}
-</style>`
-}
-
-/**
- * 生成 template 部分
- */
-function generateTemplateSection(template, pageInfo, components) {
-  let html = `  <h-page-container>
-    <h-page-header
-      slot="pageHeader"
-      :breadcrumb="${JSON.stringify(pageInfo.breadcrumb)}"
-      title="${pageInfo.title || '页面标题'}"
-    />
-    
-    <h-page-content>\n`
-  
-  // 搜索区
-  if (components.searchArea && components.searchArea.length > 0) {
-    html += `      <h-page-search
-        :model="searchForm"
-        :column="3"
-        show-high-frequency
-      >\n`
-    
-    // 搜索项
-    for (const comp of components.searchArea) {
-      html += `        <h-page-search-item
-          prop="${comp.props.prop}"
-          label="${comp.props.label}"
-        >
-          <${comp.component}
-            v-model="searchForm.${comp.props.prop}"
-            placeholder="${comp.props.placeholder || '请输入'}"
-            ${comp.props.clearable ? 'clearable' : ''}
-          ${comp.component === 'el-input' ? '/' : ''}>\n`
-      
-      // 如果是 el-select，添加选项
-      if (comp.component === 'el-select') {
-        html += `            <el-option label="选项1" value="1" />
-            <el-option label="选项2" value="2" />
-          </${comp.component}>\n`
-      } else if (comp.component !== 'el-input') {
-        html += `          </${comp.component}>\n`
-      }
-      
-      html += `        </h-page-search-item>\n`
-    }
-    
-    // 搜索按钮
-    html += `        <template slot="pageSearchAction">
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </template>
-      </h-page-search>\n\n`
-  }
-  
-  // 操作按钮区
-  if (components.actionArea && components.actionArea.length > 0) {
-    html += `      <div style="margin-bottom: 16px;">\n`
-    for (const comp of components.actionArea) {
-      html += `        <el-button
-          type="${comp.props.type || 'primary'}"
-          size="small"
-          @click="handle${capitalize(comp.props.text || 'Action')}"
-        >
-          ${comp.props.text || '按钮'}
-        </el-button>\n`
-    }
-    html += `      </div>\n\n`
-  }
-  
-  // 表格区
-  html += `      <h-page-table>
-        <el-table
-          :data="tableData"
-          border
-          v-loading="loading"
-        >
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="name" label="名称" />
-          <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column label="操作" width="150" fixed="right">
-            <template slot-scope="scope">
-              <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-              <el-button type="text" size="small" @click="handleDelete(scope.row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        
-        <el-pagination
-          slot="pagination"
-          :current-page="pagination.current"
-          :page-size="pagination.pageSize"
-          :total="pagination.total"
-          layout="total, prev, pager, next, sizes"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </h-page-table>
-    </h-page-content>
-  </h-page-container>`
-  
-  return html
-}
-
-/**
- * 生成 script 部分
- */
-function generateScriptSection(pageInfo, components) {
-  // 生成 searchForm 初始数据
-  const searchFormFields = components.searchArea?.map(comp => 
-    `    ${comp.props.prop}: ''`
-  ).join(',\n') || '    // 无搜索字段'
-  
-  // 生成方法
-  let methods = `    handleSearch() {
-      this.pagination.current = 1
-      this.fetchData()
-    },
-    
-    handleReset() {
-      this.searchForm = {
-${components.searchArea?.map(comp => `        ${comp.props.prop}: ''`).join(',\n') || ''}
-      }
-      this.handleSearch()
-    },
-    
-    async fetchData() {
-      this.loading = true
-      try {
-        // TODO: 调用接口获取数据
-        // const { data } = await this.$http.get('/api/list', {
-        //   params: {
-        //     ...this.searchForm,
-        //     page: this.pagination.current,
-        //     pageSize: this.pagination.pageSize
-        //   }
-        // })
-        // this.tableData = data.list
-        // this.pagination.total = data.total
-        
-        // 模拟数据
-        this.tableData = []
-        this.pagination.total = 0
-      } catch (error) {
-        this.$message.error('获取数据失败')
-        console.error(error)
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    handleSizeChange(size) {
-      this.pagination.pageSize = size
-      this.fetchData()
-    },
-    
-    handleCurrentChange(page) {
-      this.pagination.current = page
-      this.fetchData()
-    },
-    
-    handleEdit(row) {
-      this.$message.info('编辑功能待实现')
-      console.log('Edit row:', row)
-    },
-    
-    handleDelete(row) {
-      this.$confirm('确定要删除吗？', '提示', {
-        type: 'warning'
-      }).then(() => {
-        this.$message.success('删除成功')
-      }).catch(() => {})
-    }`
-  
-  // 添加操作按钮的方法
-  if (components.actionArea && components.actionArea.length > 0) {
-    for (const comp of components.actionArea) {
-      const methodName = `handle${capitalize(comp.props.text || 'Action')}`
-      methods += `,\n    \n    ${methodName}() {
-      this.$message.info('${comp.props.text || '按钮'}功能待实现')
-      // TODO: 实现具体业务逻辑
-    }`
-    }
-  }
-  
-  return `export default {
-  name: '${pageInfo.name || 'GeneratedPage'}',
-  
-  data() {
-    return {
-      // 搜索表单
-      searchForm: {
-${searchFormFields}
-      },
-      
-      // 表格数据
-      tableData: [],
-      
-      // 分页信息
-      pagination: {
-        current: 1,
-        pageSize: 10,
-        total: 0
-      },
-      
-      // 加载状态
-      loading: false
-    }
-  },
-  
-  mounted() {
-    this.fetchData()
-  },
-  
-  methods: {
-${methods}
-  }
-}`
-}
-
-/**
- * 生成 style 部分
- */
-function generateStyleSection() {
-  return `/* 页面样式 */
-/* hui-pro 组件已提供完整样式，无需额外添加 */`
-}
-
-/**
  * 统计组件数量
+ * @param {Object} slots - Slots 配置
+ * @returns {number} 组件总数
  */
-function countComponents(components) {
+function countComponents(slots) {
+  if (!slots) return 0
   let count = 0
-  if (components.searchArea) count += components.searchArea.length
-  if (components.actionArea) count += components.actionArea.length
-  if (components.tableArea) count += 1
+  for (const components of Object.values(slots)) {
+    if (Array.isArray(components)) {
+      count += components.length
+    }
+  }
   return count
 }
 
 /**
- * 首字母大写
+ * 格式化代码 (可选)
+ * @param {string} code - 原始代码
+ * @returns {string} 格式化后的代码
  */
-function capitalize(str) {
-  if (!str) return ''
-  return str.charAt(0).toUpperCase() + str.slice(1)
+export function formatCode(code) {
+  // TODO: 集成 Prettier 或其他代码格式化工具
+  return code
 }
 
 /**
- * 下载代码文件
- * @param {string} code - 代码内容
- * @param {string} filename - 文件名
+ * 验证生成的代码
+ * @param {string} code - 生成的代码
+ * @returns {Object} 验证结果
  */
-export function downloadCode(code, filename) {
-  const blob = new Blob([code], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
+export function validateCode(code) {
+  const issues = []
 
+  // 1. 基本验证
+  if (!code || code.trim().length === 0) {
+    issues.push({ type: 'error', message: '代码为空' })
+    return { valid: false, issues }
+  }
+
+  // 2. 格式验证
+  if (!code.includes('<template>')) {
+    issues.push({ type: 'error', message: '缺少 <template> 部分' })
+  } else if (!code.includes('</template>')) {
+    issues.push({ type: 'error', message: '<template> 标签未闭合' })
+  }
+
+  if (!code.includes('<script')) {
+    issues.push({ type: 'error', message: '缺少 <script> 部分' })
+  } else if (!code.includes('</script>')) {
+    issues.push({ type: 'error', message: '<script> 标签未闭合' })
+  }
+
+  // 3. Vue2 Options API 验证
+  if (code.includes('<script')) {
+    if (!code.includes('export default')) {
+      issues.push({ type: 'error', message: '缺少 export default' })
+    }
+
+    if (!code.includes('data()') && !code.includes('data ()')) {
+      issues.push({ type: 'warning', message: '建议使用 data() 定义数据' })
+    }
+
+    if (!code.includes('methods:') && !code.includes('methods :')) {
+      issues.push({ type: 'warning', message: '建议使用 methods 定义方法' })
+    }
+
+    // 检查是否误用了 setup
+    if (code.includes('setup(') || code.includes('<script setup')) {
+      issues.push({
+        type: 'error',
+        message: '代码使用了 Vue3 Composition API，应使用 Vue2 Options API',
+      })
+    }
+  }
+
+  // 4. 组件库验证
+  if (code.includes('<template>')) {
+    const templateContent = code.substring(code.indexOf('<template>'), code.indexOf('</template>'))
+
+    // 检查是否使用了 hui-pro 组件
+    const hasHuiPro = templateContent.includes('h-page-') || templateContent.includes('<h-page')
+    if (!hasHuiPro) {
+      issues.push({ type: 'warning', message: '未使用 hui-pro 页面组件' })
+    }
+
+    // 检查是否使用了基础组件
+    const hasElComponents =
+      templateContent.includes('el-input') ||
+      templateContent.includes('el-select') ||
+      templateContent.includes('el-button') ||
+      templateContent.includes('el-table')
+    if (!hasElComponents) {
+      issues.push({ type: 'warning', message: '未使用 hui2.43.2 基础组件' })
+    }
+  }
+
+  // 5. 语法错误检查（简单）
+  const openBraces = (code.match(/{/g) || []).length
+  const closeBraces = (code.match(/}/g) || []).length
+  if (openBraces !== closeBraces) {
+    issues.push({ type: 'warning', message: '花括号不匹配，可能存在语法错误' })
+  }
+
+  return {
+    valid: issues.filter(i => i.type === 'error').length === 0,
+    issues,
+  }
+}

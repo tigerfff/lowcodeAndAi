@@ -139,11 +139,21 @@ export function parseSlotPath(slotPath) {
  * @returns {Array} slot 列表
  */
 export function getSlotsForComponent(template, componentName) {
-  if (!template.slots || !Array.isArray(template.slots)) {
+  if (!template.slots) {
     return []
   }
-  return template.slots.filter(slot => {
-    const { component } = parseSlotPath(slot.name)
+  const slots = Array.isArray(template.slots)
+    ? template.slots
+    : Object.entries(template.slots).map(([name, meta]) => ({
+        name,
+        ...meta,
+      }))
+
+  return slots.filter(slot => {
+    if (!slot.name && typeof slot.label === 'string') {
+      return slot.label === componentName
+    }
+    const { component } = parseSlotPath(slot.name || '')
     return component === componentName
   })
 }

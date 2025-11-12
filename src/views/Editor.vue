@@ -1,317 +1,358 @@
 <template>
-  <div class="editor-container">
-    <!-- 顶部工具栏 -->
-    <div class="editor-header">
-      <div class="header-left">
-        <el-select
-          v-model="selectedTemplateId"
-          placeholder="选择模板"
-          class="template-selector"
-          @change="handleTemplateChange"
-        >
-          <el-option
-            v-for="tpl in templates"
-            :key="tpl.id"
-            :label="tpl.label"
-            :value="tpl.id"
+  <div class="editor-page flex h-full flex-col bg-gray-50">
+    <header class="border-b border-gray-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between px-8 py-4">
+        <div class="flex items-center gap-3">
+          <el-icon :size="32" class="text-primary">
+            <MagicStick />
+          </el-icon>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">智能页面代码生成工具</h1>
+            <p class="text-sm text-gray-500">
+              极简交互 + AI 智能推断，全部流程都在这一个工作台里完成
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <el-button :icon="Download" @click="handleExportConfig">导出配置</el-button>
+          <el-button :icon="Upload" @click="handleImportConfig">导入配置</el-button>
+          <el-button :icon="RefreshLeft" type="warning" @click="handleReset">重置</el-button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+      <aside
+        class="workspace-sidebar flex w-72 flex-col border-r border-gray-200 bg-white shadow-sm"
+      >
+        <div class="border-b border-gray-100 px-6 py-5">
+          <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">工作概览</div>
+          <div class="mt-4 space-y-3 text-sm text-gray-600">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">模板</span>
+              <template v-if="editorStore.selectedTemplate">
+                <el-tag size="small" type="success">
+                  {{ editorStore.selectedTemplate.label }}
+                </el-tag>
+              </template>
+              <span v-else class="text-gray-400">未选择</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">组件</span>
+              <el-tag size="small" type="info">
+                {{ totalComponentCount }}
+              </el-tag>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">API</span>
+              <template v-if="editorStore.apiConfigs.length">
+                <el-tag size="small" type="warning">
+                  {{ editorStore.apiConfigs.length }}
+                </el-tag>
+              </template>
+              <span v-else class="text-gray-400">未配置</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">模型</span>
+              <el-tag size="small" type="primary">
+                {{ editorStore.aiConfig.model }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-auto px-6 py-6">
+          <div class="space-y-3">
+            <el-button block :icon="Document" type="primary" @click="templateDrawerVisible = true">
+              选择模板
+            </el-button>
+            <el-button block :icon="Setting" type="default" @click="componentDrawerVisible = true">
+              组件配置
+            </el-button>
+            <el-button block :icon="Connection" type="default" @click="apiDrawerVisible = true">
+              API 配置
+            </el-button>
+            <el-button block :icon="Cpu" type="default" @click="openModelDialog">
+              模型设置
+            </el-button>
+          </div>
+
+          <div class="mt-8 space-y-3 text-sm text-gray-500">
+            <div class="font-semibold text-gray-600">快速提示</div>
+            <ul class="space-y-2">
+              <li>• 抽屉内完成配置，关闭即生效</li>
+              <li>• 主视图可以随时在出码和对话间切换</li>
+              <li>• AI 配置会保存在本地浏览器</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-100 px-6 py-5 text-xs text-gray-400">
+          构建完成后可直接复制或下载生成代码
+        </div>
+      </aside>
+
+      <main class="flex-1 overflow-hidden">
+        <div class="flex h-full flex-col">
+          <div class="border-b border-gray-200 bg-white px-8 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div class="flex flex-wrap items-center gap-3">
+                <el-tag v-if="editorStore.selectedTemplate" type="success">
+                  模板：{{ editorStore.selectedTemplate.label }}
+                </el-tag>
+                <el-tag v-if="editorStore.pageInfo.pageName" type="info">
+                  页面：{{ editorStore.pageInfo.pageName }}
+                </el-tag>
+                <el-tag v-if="editorStore.apiConfigs.length" type="warning">
+                  API × {{ editorStore.apiConfigs.length }}
+                </el-tag>
+                <el-tag type="primary">模型：{{ editorStore.aiConfig.model }}</el-tag>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <el-button text type="primary" @click="componentDrawerVisible = true">
+                  快速编辑组件
+                </el-button>
+                <el-button text type="primary" @click="apiDrawerVisible = true">
+                  查看 API
+                </el-button>
+                <el-button text type="primary" @click="openModelDialog"> 切换模型 </el-button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-hidden px-8 py-6">
+            <el-tabs v-model="activeMainTab" class="ai-workbench h-full" type="border-card">
+              <el-tab-pane name="code" label="AI 出码">
+                <div class="h-full overflow-auto">
+                  <CodeGenerator @request-ai-config="openModelDialog" />
+                </div>
+              </el-tab-pane>
+              <el-tab-pane name="chat" label="AI 对话">
+                <div class="h-full overflow-hidden">
+                  <AiChatPanel @request-ai-config="openModelDialog" />
+                </div>
+              </el-tab-pane>
+            </el-tabs>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <el-drawer
+      v-model="templateDrawerVisible"
+      size="480px"
+      title="选择页面模板"
+      :close-on-click-modal="false"
+    >
+      <TemplateSelector />
+    </el-drawer>
+
+    <el-drawer
+      v-model="componentDrawerVisible"
+      size="560px"
+      title="组件配置"
+      :close-on-click-modal="false"
+    >
+      <ComponentConfig />
+    </el-drawer>
+
+    <el-drawer
+      v-model="apiDrawerVisible"
+      size="520px"
+      title="API 配置"
+      :close-on-click-modal="false"
+    >
+      <ApiConfig />
+    </el-drawer>
+
+    <el-dialog
+      v-model="modelDialogVisible"
+      width="460px"
+      title="AI 模型设置"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="editorStore.aiConfig" label-width="110px" class="space-y-1">
+        <el-form-item label="Base URL" required>
+          <el-input
+            v-model="editorStore.aiConfig.baseUrl"
+            placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
           />
-        </el-select>
-      </div>
+        </el-form-item>
+        <el-form-item label="API Key" required>
+          <el-input
+            v-model="editorStore.aiConfig.apiKey"
+            type="password"
+            show-password
+            placeholder="sk-xxxxxxxxxxxxxxxx"
+          />
+        </el-form-item>
+        <el-form-item label="模型">
+          <el-select
+            v-model="editorStore.aiConfig.model"
+            class="w-full"
+            filterable
+            allow-create
+            default-first-option
+            clearable
+            placeholder="输入或选择模型 ID，例如 qwen3-vl-plus"
+          >
+            <el-option-group label="常用模型">
+              <el-option label="qwen3-vl-plus" value="qwen3-vl-plus" />
+              <el-option label="qwen-max" value="qwen-max" />
+              <el-option label="gpt-4" value="gpt-4" />
+              <el-option label="claude-3-5-sonnet-latest" value="claude-3-5-sonnet-latest" />
+            </el-option-group>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Temperature">
+          <el-slider
+            v-model="editorStore.aiConfig.temperature"
+            :min="0"
+            :max="1"
+            :step="0.1"
+            show-input
+          />
+        </el-form-item>
+        <el-form-item label="Max Tokens">
+          <el-input-number
+            v-model="editorStore.aiConfig.maxTokens"
+            :min="1000"
+            :max="8000"
+            :step="500"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="flex items-center justify-between text-xs text-gray-500">
+          <span>配置会保存到浏览器本地</span>
+          <div class="space-x-2">
+            <el-button @click="modelDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="handleSaveModelConfig">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
 
-      <div class="header-center">
-        <el-button-group>
-          <el-button icon="el-icon-refresh-left" :disabled="!canUndo" @click="handleUndo">
-            撤销
-          </el-button>
-          <el-button icon="el-icon-refresh-right" :disabled="!canRedo" @click="handleRedo">
-            重做
-          </el-button>
-        </el-button-group>
-      </div>
-
-      <div class="header-right">
-        <el-button icon="el-icon-view" @click="handlePreview">
-          预览
-        </el-button>
-        <el-button type="primary" icon="el-icon-document" @click="handleGenerate">
-          生成代码
-        </el-button>
-        <el-button icon="el-icon-download" @click="handleSave">
-          保存配置
-        </el-button>
-      </div>
-    </div>
-
-    <!-- 主编辑区域 - 三栏布局 -->
-    <div class="editor-main">
-      <!-- 左侧：组件库 -->
-      <div class="editor-left">
-        <ComponentLibrary />
-      </div>
-
-      <!-- 中间：实时预览 -->
-      <div class="editor-center">
-        <PreviewPanel />
-      </div>
-
-      <!-- 右侧：属性配置 -->
-      <div class="editor-right">
-        <ConfigPanel />
-      </div>
-    </div>
-
-    <!-- 代码预览对话框 -->
-    <CodePreviewDialog
-      v-model:visible="codePreviewVisible"
-      :code="generatedCode"
-      :prompt="generatedPrompt"
-      :metadata="generatedMetadata"
-      :filename="generatedFilename"
-    />
+    <el-dialog v-model="importDialogVisible" title="导入配置" width="600px">
+      <el-input
+        v-model="importConfigText"
+        type="textarea"
+        :rows="15"
+        placeholder="请粘贴配置 JSON..."
+      />
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmImportConfig">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
-<script>
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { useEditorStore } from '@/stores/editorStore'
-import ComponentLibrary from '@/components/ComponentLibrary.vue'
-import PreviewPanel from '@/components/PreviewPanel.vue'
-import ConfigPanel from '@/components/ConfigPanel.vue'
-import CodePreviewDialog from '@/components/CodePreviewDialog.vue'
-import { getAllTemplates, getTemplateById } from '@/services/templateManager'
-import { generateCode } from '@/services/codeGenerator'
+<script setup>
+import { computed, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  MagicStick,
+  Document,
+  Setting,
+  Connection,
+  Cpu,
+  Download,
+  Upload,
+  RefreshLeft,
+} from '@element-plus/icons-vue'
+import { useEditorStore } from '../stores/editorStore'
+import TemplateSelector from '../components/TemplateSelector.vue'
+import ComponentConfig from '../components/ComponentConfig.vue'
+import ApiConfig from '../components/ApiConfig.vue'
+import CodeGenerator from '../components/CodeGenerator.vue'
+import AiChatPanel from '../components/AiChatPanel.vue'
 
-export default {
-  name: 'Editor',
-  components: {
-    ComponentLibrary,
-    PreviewPanel,
-    ConfigPanel,
-    CodePreviewDialog
-  },
-  setup() {
-    const editorStore = useEditorStore()
+const editorStore = useEditorStore()
 
-    // 模板列表
-    const templates = ref([])
+const templateDrawerVisible = ref(false)
+const componentDrawerVisible = ref(false)
+const apiDrawerVisible = ref(false)
+const modelDialogVisible = ref(false)
+const activeMainTab = ref('code')
 
-    // 选中的模板
-    const selectedTemplateId = ref('')
+const importDialogVisible = ref(false)
+const importConfigText = ref('')
 
-    // 代码预览对话框
-    const codePreviewVisible = ref(false)
-    const generatedCode = ref('')
-    const generatedPrompt = ref('')
-    const generatedMetadata = ref({})
-    const generatedFilename = ref('GeneratedPage.vue')
+const totalComponentCount = computed(() => {
+  const searchCount = editorStore.slots.searchArea?.length || 0
+  const actionCount = editorStore.slots.actionArea?.length || 0
+  const tableCount = editorStore.slots.tableColumns?.length || 0
+  return searchCount + actionCount + tableCount
+})
 
-    // 撤销/重做状态
-    const canUndo = computed(() => editorStore.canUndo)
-    const canRedo = computed(() => editorStore.canRedo)
+function openModelDialog() {
+  modelDialogVisible.value = true
+}
 
-    // 初始化
-    onMounted(async () => {
-      // 加载模板列表
-      templates.value = await getAllTemplates()
-      if (templates.value.length > 0) {
-        selectedTemplateId.value = templates.value[0].id
-        await handleTemplateChange(selectedTemplateId.value)
-      }
-    })
+function handleSaveModelConfig() {
+  editorStore.updateAiConfig({ ...editorStore.aiConfig })
+  ElMessage.success('AI 模型配置已保存')
+  modelDialogVisible.value = false
+}
 
-    // 处理模板切换
-    const handleTemplateChange = async (templateId) => {
-      const template = await getTemplateById(templateId)
-      if (template) {
-        editorStore.selectTemplate(template)
-        ElMessage.success(`已切换到模板：${template.label}`)
-      }
-    }
+function handleExportConfig() {
+  const config = editorStore.exportConfig()
+  const jsonStr = JSON.stringify(config, null, 2)
 
-    // 撤销
-    const handleUndo = () => {
-      editorStore.undo()
-      ElMessage.success('已撤销')
-    }
+  const blob = new Blob([jsonStr], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `page-config-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
 
-    // 重做
-    const handleRedo = () => {
-      editorStore.redo()
-      ElMessage.success('已重做')
-    }
+  ElMessage.success('配置已导出')
+}
 
-    // 预览
-    const handlePreview = () => {
-      window.open('/preview-iframe.html', '_blank')
-    }
+function handleImportConfig() {
+  importConfigText.value = ''
+  importDialogVisible.value = true
+}
 
-    // 生成代码
-    const handleGenerate = async () => {
-      const loading = ElMessage({
-        message: '正在生成代码...',
-        type: 'info',
-        duration: 0
-      })
-
-      try {
-        const config = editorStore.exportConfig()
-        const result = await generateCode(config, { useAI: false })
-
-        loading.close()
-
-        if (result.success) {
-          generatedCode.value = result.code
-          generatedPrompt.value = result.prompt
-          generatedMetadata.value = result.metadata
-          generatedFilename.value = `${config.pageInfo.name || 'GeneratedPage'}.vue`
-          codePreviewVisible.value = true
-
-          ElMessage.success('代码生成成功')
-        } else {
-          ElMessage.error(`生成失败：${result.error}`)
-        }
-      } catch (error) {
-        loading.close()
-        console.error('Generate error:', error)
-        ElMessage.error('生成代码时发生错误')
-      }
-    }
-
-    // 保存配置
-    const handleSave = () => {
-      const config = editorStore.exportConfig()
-      const blob = new Blob([JSON.stringify(config, null, 2)], {
-        type: 'application/json'
-      })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${config.pageInfo.name || 'config'}.json`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
-      ElMessage.success('配置已保存')
-    }
-
-    return {
-      templates,
-      selectedTemplateId,
-      canUndo,
-      canRedo,
-      codePreviewVisible,
-      generatedCode,
-      generatedPrompt,
-      generatedMetadata,
-      generatedFilename,
-      handleTemplateChange,
-      handleUndo,
-      handleRedo,
-      handlePreview,
-      handleGenerate,
-      handleSave
-    }
+async function confirmImportConfig() {
+  try {
+    const config = JSON.parse(importConfigText.value)
+    await editorStore.importConfig(config)
+    importDialogVisible.value = false
+    ElMessage.success('配置已导入')
+  } catch (error) {
+    ElMessage.error('配置格式错误: ' + error.message)
   }
+}
+
+function handleReset() {
+  ElMessageBox.confirm('确定要重置所有配置吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      editorStore.reset()
+      ElMessage.success('已重置')
+    })
+    .catch(() => {})
 }
 </script>
 
 <style scoped>
-.editor-container {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #f5f5f5;
+.workspace-sidebar {
+  min-width: 18rem;
+}
+
+.ai-workbench :deep(.el-tabs__content) {
+  height: calc(100% - 40px);
+}
+
+.ai-workbench :deep(.el-tab-pane) {
+  height: 100%;
   overflow: hidden;
-}
-
-/* 顶部工具栏 */
-.editor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  z-index: 100;
-}
-
-.header-left,
-.header-center,
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.template-selector {
-  width: 200px;
-}
-
-/* 主编辑区域 - 三栏布局 */
-.editor-main {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 260px 1fr 380px;
-  gap: 0;
-  overflow: hidden;
-  min-height: 0; /* 重要：解决 grid 子元素溢出问题 */
-}
-
-/* 左侧：组件库 */
-.editor-left {
-  background: #ffffff;
-  border-right: 1px solid #e0e0e0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* 中间：预览区 */
-.editor-center {
-  background: #f0f2f5;
-  position: relative;
-  overflow: hidden;
-}
-
-/* 右侧：配置面板 */
-.editor-right {
-  background: #ffffff;
-  border-left: 1px solid #e0e0e0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* 滚动条样式 */
-.editor-left::-webkit-scrollbar,
-.editor-right::-webkit-scrollbar {
-  width: 6px;
-}
-
-.editor-left::-webkit-scrollbar-thumb,
-.editor-right::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
-  border-radius: 3px;
-}
-
-.editor-left::-webkit-scrollbar-thumb:hover,
-.editor-right::-webkit-scrollbar-thumb:hover {
-  background: #b0b0b0;
-}
-
-/* 响应式适配 */
-@media (max-width: 1440px) {
-  .editor-main {
-    grid-template-columns: 240px 1fr 360px;
-  }
-}
-
-@media (max-width: 1280px) {
-  .editor-main {
-    grid-template-columns: 220px 1fr 340px;
-  }
 }
 </style>
-

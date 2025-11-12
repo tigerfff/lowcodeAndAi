@@ -73,7 +73,7 @@ export function validateConfig(config) {
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -115,7 +115,7 @@ export function validateComponent(component) {
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -129,7 +129,7 @@ export function exportConfig(config, format = 'json') {
   const configWithVersion = {
     version: CONFIG_VERSION,
     exportTime: new Date().toISOString(),
-    ...config
+    ...config,
   }
 
   const configString = JSON.stringify(configWithVersion, null, 2)
@@ -182,7 +182,7 @@ export async function importConfigFromFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
 
-    reader.onload = async (e) => {
+    reader.onload = async e => {
       try {
         const config = await importConfig(e.target.result)
         resolve(config)
@@ -230,7 +230,7 @@ function migrate_0_to_1(config) {
     config.pageInfo = {
       name: 'GeneratedPage',
       title: '页面标题',
-      breadcrumb: []
+      breadcrumb: [],
     }
   }
 
@@ -238,7 +238,7 @@ function migrate_0_to_1(config) {
     config.components = {
       searchArea: [],
       tableArea: null,
-      actionArea: []
+      actionArea: [],
     }
   }
 
@@ -278,21 +278,23 @@ function compareVersions(v1, v2) {
 export function createDefaultConfig(template) {
   return {
     version: CONFIG_VERSION,
-    template: template ? {
-      id: template.id,
-      label: template.label
-    } : null,
+    template: template
+      ? {
+          id: template.id,
+          label: template.label,
+        }
+      : null,
     pageInfo: {
       name: '',
       title: '',
-      breadcrumb: []
+      breadcrumb: [],
     },
     components: {
       searchArea: [],
       tableArea: null,
-      actionArea: []
+      actionArea: [],
     },
-    globalAiPrompt: ''
+    globalAiPrompt: '',
   }
 }
 
@@ -317,12 +319,12 @@ export function mergeConfig(target, source) {
     ...source,
     pageInfo: {
       ...target.pageInfo,
-      ...source.pageInfo
+      ...source.pageInfo,
     },
     components: {
       ...target.components,
-      ...source.components
-    }
+      ...source.components,
+    },
   }
 }
 
@@ -354,7 +356,6 @@ export function getConfigSummary(config) {
     searchCount,
     actionCount,
     hasTable,
-    hasGlobalPrompt: !!config.globalAiPrompt
+    hasGlobalPrompt: !!config.globalAiPrompt,
   }
 }
-
