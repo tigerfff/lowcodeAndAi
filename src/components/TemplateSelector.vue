@@ -130,14 +130,7 @@ async function loadTemplates() {
 function autoSelectTemplate() {
   if (!templates.value || templates.value.length === 0) return
 
-  const savedId = (() => {
-    try {
-      return localStorage.getItem('ai-code-gen-selected-template')
-    } catch (error) {
-      console.error('Failed to read saved template id:', error)
-      return null
-    }
-  })()
+  const savedId = editorStore.selectedTemplateId
 
   let target =
     (savedId && templates.value.find(template => template.id === savedId)) ||

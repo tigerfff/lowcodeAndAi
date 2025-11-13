@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { getAllTemplates } from '../services/templateManager'
 
 /**
  * 编辑器状态管理
@@ -13,6 +14,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   // 选中的模板
   const selectedTemplate = ref(null)
+  const selectedTemplateId = ref(null)
 
   // 页面基本信息
   const pageInfo = ref({
@@ -103,11 +105,18 @@ export const useEditorStore = defineStore('editor', () => {
    */
   function selectTemplate(template) {
     selectedTemplate.value = template
+    selectedTemplateId.value = template?.id || null
     if (template?.id) {
       try {
         localStorage.setItem('ai-code-gen-selected-template', template.id)
       } catch (error) {
         console.error('Failed to save selected template:', error)
+      }
+    } else {
+      try {
+        localStorage.removeItem('ai-code-gen-selected-template')
+      } catch (error) {
+        console.error('Failed to clear template cache:', error)
       }
     }
     // 初始化 slots 结构
@@ -259,6 +268,126 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+function loadTemplatePreference() {
+  try {
+    const savedTemplateId = localStorage.getItem('ai-code-gen-selected-template')
+    if (savedTemplateId) {
+      selectedTemplateId.value = savedTemplateId
+    }
+  } catch (error) {
+    console.error('Failed to load saved template id:', error)
+  }
+}
+
+async function ensureTemplateSelected() {
+  if (selectedTemplate.value?.id) return
+  try {
+    const templateList = await getAllTemplates()
+    if (!Array.isArray(templateList) || templateList.length === 0) return
+    const savedId = selectedTemplateId.value
+    const target =
+      (savedId && templateList.find(template => template.id === savedId)) ||
+      templateList[0]
+    if (target) {
+      selectTemplate(target)
+    }
+  } catch (error) {
+    console.error('Failed to ensure template selection:', error)
+  }
+}
+
+function normalizeComponent(slotName, item, index) {
+  if (!item || typeof item !== 'object') return null
+  const defaultComponentMap = {
+    searchArea: 'el-input',
+    actionArea: 'el-button',
+    tableColumns: 'el-table-column',
+  }
+  const componentName = item.component || defaultComponentMap[slotName] || 'el-input'
+  const id =
+    item.id ||
+    `${slotName}_${componentName}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`
+  const normalized = {
+    id,
+    component: componentName,
+    label: item.label || item.text || item.title || '',
+    model: item.model || '',
+    props: item.props ? { ...item.props } : {},
+    events: item.events ? { ...item.events } : {},
+    wrapperProps: item.wrapperProps ? { ...item.wrapperProps } : {},
+    defaultValue: item.defaultValue ?? '',
+    customRender: item.customRender,
+    order: index + 1,
+  }
+  if (item.text) {
+    normalized.text = item.text
+  }
+  return normalized
+}
+
+function normalizeSlotComponents(slotName, list) {
+  if (!Array.isArray(list)) return []
+  return list
+    .map((item, index) => normalizeComponent(slotName, item, index))
+    .filter(Boolean)
+}
+
+function setApiConfigsFromSuggestion(configs) {
+  if (!Array.isArray(configs)) return
+  apiConfigs.value = configs.map((api, index) => {
+    const requestExample =
+      typeof api.requestExample === 'string'
+        ? api.requestExample
+        : api.requestExample
+        ? JSON.stringify(api.requestExample, null, 2)
+        : ''
+    const responseExample =
+      typeof api.responseExample === 'string'
+        ? api.responseExample
+        : api.responseExample
+        ? JSON.stringify(api.responseExample, null, 2)
+        : ''
+    return {
+      id: api.id || `api_${Date.now()}_${index}`,
+      name: api.name || api.title || `API ${index + 1}`,
+      url: api.url || '',
+      method: api.method || 'GET',
+      requestExample,
+      responseExample,
+      description: api.description || '',
+      order: index + 1,
+    }
+  })
+}
+
+function applyComponentSuggestion(payload) {
+  if (!payload || typeof payload !== 'object') return
+  const source = payload.slots || payload
+  const nextSlots = {
+    searchArea: normalizeSlotComponents(
+      'searchArea',
+      source.searchArea || source.search || []
+    ),
+    actionArea: normalizeSlotComponents(
+      'actionArea',
+      source.actionArea || source.actions || []
+    ),
+    tableColumns: normalizeSlotComponents(
+      'tableColumns',
+      source.tableColumns || source.columns || []
+    ),
+  }
+  slots.value = nextSlots
+
+  if (payload.pageInfo && typeof payload.pageInfo === 'object') {
+    pageInfo.value = { ...pageInfo.value, ...payload.pageInfo }
+  }
+
+  if (Array.isArray(payload.apiConfigs)) {
+    setApiConfigsFromSuggestion(payload.apiConfigs)
+  }
+}
+
   /**
    * 更新生成的代码
    */
@@ -337,6 +466,7 @@ export const useEditorStore = defineStore('editor', () => {
   function reset() {
     currentStep.value = 1
     selectedTemplate.value = null
+    selectedTemplateId.value = null
     pageInfo.value = {
       pageName: '',
       title: '',
@@ -379,10 +509,16 @@ export const useEditorStore = defineStore('editor', () => {
     // 需要先加载模板
     // 这里假设有一个 templateManager 可以获取模板
     if (config.templateId) {
+      selectedTemplateId.value = config.templateId
       // const template = await getTemplateById(config.templateId)
       // if (template) {
       //   selectTemplate(template)
       // }
+      try {
+        localStorage.setItem('ai-code-gen-selected-template', config.templateId)
+      } catch (error) {
+        console.error('Failed to persist template id from config:', error)
+      }
     }
 
     if (config.pageInfo) {
@@ -402,23 +538,16 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  // 初始化时加载 AI 配置
+  // 初始化时加载配置
   loadAiConfig()
-  try {
-    const savedTemplateId = localStorage.getItem('ai-code-gen-selected-template')
-    if (savedTemplateId) {
-      // 模板将在页面加载时根据该 ID 重新选中
-      // 具体模板数据由 TemplateSelector 负责匹配
-      console.log('💾 Loaded saved template id:', savedTemplateId)
-    }
-  } catch (error) {
-    console.error('Failed to load saved template id:', error)
-  }
+  loadTemplatePreference()
+  ensureTemplateSelected()
 
   return {
     // 状态
     currentStep,
     selectedTemplate,
+    selectedTemplateId,
     pageInfo,
     slots,
     apiConfigs,
@@ -447,6 +576,7 @@ export const useEditorStore = defineStore('editor', () => {
     updateApiConfig,
     updateAiConfig,
     loadAiConfig,
+    ensureTemplateSelected,
     setGeneratedCode,
     appendChatMessage,
     setChatMessages,
@@ -458,5 +588,7 @@ export const useEditorStore = defineStore('editor', () => {
     reset,
     exportConfig,
     importConfig,
+    applyComponentSuggestion,
+    setApiConfigsFromSuggestion,
   }
 })
