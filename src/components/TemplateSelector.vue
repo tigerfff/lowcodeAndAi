@@ -16,11 +16,11 @@
     </div>
 
     <!-- 模板列表 -->
-    <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
       <div
         v-for="template in templates"
         :key="template.id"
-        class="group cursor-pointer rounded-lg border-2 p-6 transition-all duration-200"
+        class="group min-w-0 cursor-pointer rounded-lg border-2 p-6 transition-all duration-200"
         :class="{
           'border-primary bg-blue-50 shadow-md': editorStore.selectedTemplate?.id === template.id,
           'border-gray-200 hover:border-primary hover:shadow-md':
@@ -55,7 +55,9 @@
         </div>
 
         <!-- 描述 -->
-        <p class="mb-4 text-sm text-gray-600">{{ template.description }}</p>
+        <p class="mb-4 min-w-0 break-words text-sm text-gray-600">
+          {{ template.description }}
+        </p>
 
         <!-- Slots 信息 -->
         <div class="mb-4 space-y-2">
@@ -131,10 +133,8 @@ function autoSelectTemplate() {
   if (!templates.value || templates.value.length === 0) return
 
   const savedId = editorStore.selectedTemplateId
-
-  let target =
-    (savedId && templates.value.find(template => template.id === savedId)) ||
-    templates.value[0]
+  const target =
+    (savedId && templates.value.find(template => template.id === savedId)) || templates.value[0]
 
   if (target && editorStore.selectedTemplate?.id !== target.id) {
     selectTemplate(target, { silent: true })
@@ -155,9 +155,3 @@ onMounted(() => {
   loadTemplates()
 })
 </script>
-
-<style scoped>
-.template-selector {
-  /* 样式已通过 Tailwind CSS 实现 */
-}
-</style>

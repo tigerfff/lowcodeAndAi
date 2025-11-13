@@ -11,6 +11,7 @@
         <div class="flex items-center gap-3">
           <el-button :icon="Download" @click="handleExportConfig">导出配置</el-button>
           <el-button :icon="Upload" @click="handleImportConfig">导入配置</el-button>
+          <el-button :icon="Setting" @click="openModelDialog">模型设置</el-button>
           <el-button :icon="RefreshLeft" type="warning" @click="handleReset">重置</el-button>
         </div>
       </div>
@@ -58,14 +59,11 @@
 
         <div class="flex-1 overflow-auto px-6 py-6">
           <div class="space-y-3">
-            <el-button block :icon="Setting" type="default" @click="componentDrawerVisible = true">
+            <el-button style="margin-bottom: 0" block :icon="Setting" type="default" @click="componentDrawerVisible = true">
               组件配置
             </el-button>
             <el-button block :icon="Connection" type="default" @click="apiDrawerVisible = true">
               API 配置
-            </el-button>
-            <el-button block :icon="Cpu" type="default" @click="openModelDialog">
-              模型设置
             </el-button>
           </div>
 
@@ -88,17 +86,17 @@
         <div class="flex h-full flex-col">
           <div class="border-b border-gray-200 bg-white px-8 py-4">
             <div class="flex flex-wrap items-center justify-between gap-4">
-              <div class="flex flex-wrap items-center gap-3">
-                <el-tag v-if="editorStore.selectedTemplate" type="success">
+              <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                <span v-if="editorStore.selectedTemplate">
                   模板：{{ editorStore.selectedTemplate.label }}
-                </el-tag>
-                <el-tag v-if="editorStore.pageInfo.pageName" type="info">
+                </span>
+                <span v-if="editorStore.pageInfo.pageName">
                   页面：{{ editorStore.pageInfo.pageName }}
-                </el-tag>
-                <el-tag v-if="editorStore.apiConfigs.length" type="warning">
+                </span>
+                <span v-if="editorStore.apiConfigs.length">
                   API × {{ editorStore.apiConfigs.length }}
-                </el-tag>
-                <el-tag type="primary">模型：{{ editorStore.aiConfig.model }}</el-tag>
+                </span>
+                <span>模型：{{ editorStore.aiConfig.model }}</span>
               </div>
 
               <div class="flex items-center gap-2">
@@ -322,7 +320,6 @@ import {
   Document,
   Setting,
   Connection,
-  Cpu,
   Download,
   Upload,
   RefreshLeft,

@@ -15,7 +15,7 @@
         <el-button type="primary" size="large" :icon="MagicStick" @click="handleGenerate">
           开始生成
         </el-button>
-      </div>
+      </div>  
     </el-card>
 
     <!-- 生成中 -->
