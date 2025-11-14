@@ -102,56 +102,61 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script>
 import { ElMessage } from 'element-plus'
 import { Document, CircleCheck, Loading } from '@element-plus/icons-vue'
+import { mapStores } from 'pinia'
 import { useEditorStore } from '../stores/editorStore'
 import { getAllTemplates } from '../services/templateManager'
 
-const editorStore = useEditorStore()
-const loading = ref(false)
-const templates = ref([])
+export default {
+  name: 'TemplateSelector',
+  components: {
+    Document,
+    CircleCheck,
+    Loading,
+  },
+  data() {
+    return {
+      loading: false,
+      templates: [],
+    }
+  },
+  computed: {
+    ...mapStores(useEditorStore),
+  },
+  created() {
+    this.loadTemplates()
+  },
+  methods: {
+    async loadTemplates() {
+      this.loading = true
+      try {
+        this.templates = await getAllTemplates()
+        this.autoSelectTemplate()
+      } catch (error) {
+        console.error('Failed to load templates:', error)
+        ElMessage.error('加载模板失败')
+      } finally {
+        this.loading = false
+      }
+    },
+    autoSelectTemplate() {
+      if (!this.templates || this.templates.length === 0) return
+      const savedId = this.editorStore.selectedTemplateId
+      const target =
+        (savedId && this.templates.find(template => template.id === savedId)) || this.templates[0]
 
-/**
- * 加载模板
- */
-async function loadTemplates() {
-  loading.value = true
-  try {
-    templates.value = await getAllTemplates()
-    autoSelectTemplate()
-  } catch (error) {
-    console.error('Failed to load templates:', error)
-    ElMessage.error('加载模板失败')
-  } finally {
-    loading.value = false
-  }
+      if (target && this.editorStore.selectedTemplate?.id !== target.id) {
+        this.selectTemplate(target, { silent: true })
+      }
+    },
+    selectTemplate(template, { silent = false } = {}) {
+      this.editorStore.selectTemplate(template)
+      if (!silent) {
+        ElMessage.success(`已选择模板: ${template.label}`)
+      }
+    },
+  },
 }
-
-function autoSelectTemplate() {
-  if (!templates.value || templates.value.length === 0) return
-
-  const savedId = editorStore.selectedTemplateId
-  const target =
-    (savedId && templates.value.find(template => template.id === savedId)) || templates.value[0]
-
-  if (target && editorStore.selectedTemplate?.id !== target.id) {
-    selectTemplate(target, { silent: true })
-  }
-}
-
-/**
- * 选择模板
- */
-function selectTemplate(template, { silent = false } = {}) {
-  editorStore.selectTemplate(template)
-  if (!silent) {
-    ElMessage.success(`已选择模板: ${template.label}`)
-  }
-}
-
-onMounted(() => {
-  loadTemplates()
-})
 </script>

@@ -31,72 +31,68 @@
   </el-dialog>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script>
 import { ElMessage } from 'element-plus'
 import { CopyDocument, Download } from '@element-plus/icons-vue'
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    default: false,
+export default {
+  name: 'CodePreviewDialog',
+  components: {
+    CopyDocument,
+    Download,
   },
-  code: {
-    type: String,
-    default: '',
+  props: {
+    visible: {
+      type: Boolean,
+      default: false,
+    },
+    code: {
+      type: String,
+      default: '',
+    },
+    fileName: {
+      type: String,
+      default: 'Page.vue',
+    },
   },
-  fileName: {
-    type: String,
-    default: 'Page.vue',
+  emits: ['update:visible'],
+  computed: {
+    lineCount() {
+      return this.code ? this.code.split('\n').length : 0
+    },
+    fileSize() {
+      return new Blob([this.code]).size
+    },
+    fileSizeFormatted() {
+      if (this.fileSize < 1024) {
+        return `${this.fileSize} B`
+      }
+      if (this.fileSize < 1024 * 1024) {
+        return `${(this.fileSize / 1024).toFixed(2)} KB`
+      }
+      return `${(this.fileSize / (1024 * 1024)).toFixed(2)} MB`
+    },
   },
-})
-
-const emit = defineEmits(['update:visible'])
-
-// 行数
-const lineCount = computed(() => {
-  return props.code ? props.code.split('\n').length : 0
-})
-
-// 文件大小
-const fileSize = computed(() => {
-  return new Blob([props.code]).size
-})
-
-const fileSizeFormatted = computed(() => {
-  if (fileSize.value < 1024) {
-    return `${fileSize.value} B`
-  } else if (fileSize.value < 1024 * 1024) {
-    return `${(fileSize.value / 1024).toFixed(2)} KB`
-  } else {
-    return `${(fileSize.value / (1024 * 1024)).toFixed(2)} MB`
-  }
-})
-
-/**
- * 复制代码
- */
-async function handleCopy() {
-  try {
-    await navigator.clipboard.writeText(props.code)
-    ElMessage.success('代码已复制到剪贴板')
-  } catch (error) {
-    ElMessage.error('复制失败')
-  }
-}
-
-/**
- * 下载代码
- */
-function handleDownload() {
-  const blob = new Blob([props.code], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = props.fileName
-  a.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('文件已下载')
+  methods: {
+    async handleCopy() {
+      try {
+        await navigator.clipboard.writeText(this.code)
+        ElMessage.success('代码已复制到剪贴板')
+      } catch (error) {
+        ElMessage.error('复制失败')
+      }
+    },
+    handleDownload() {
+      const blob = new Blob([this.code], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = this.fileName
+      a.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('文件已下载')
+    },
+  },
 }
 </script>
 

@@ -50,91 +50,88 @@
   </el-dialog>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Search, Edit, Operation, Grid } from '@element-plus/icons-vue'
+<script>
 import { getAllComponents } from '../services/componentLibrary'
+import { Search, Edit, Operation, Grid } from '@element-plus/icons-vue'
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    default: false,
+export default {
+  name: 'ComponentSelector',
+  components: {
+    Search,
+    Edit,
+    Operation,
+    Grid,
   },
-  slotName: {
-    type: String,
-    default: '',
+  props: {
+    visible: {
+      type: Boolean,
+      default: false,
+    },
+    slotName: {
+      type: String,
+      default: '',
+    },
+    allowedComponents: {
+      type: Array,
+      default: () => [],
+    },
   },
-  allowedComponents: {
-    type: Array,
-    default: () => [],
+  emits: ['update:visible', 'select'],
+  data() {
+    return {
+      searchKeyword: '',
+      activeCategory: 'all',
+      componentList: [],
+    }
   },
-})
+  computed: {
+    filteredComponents() {
+      let result = this.componentList
 
-const emit = defineEmits(['update:visible', 'select'])
+      if (this.allowedComponents.length > 0) {
+        result = result.filter(component => this.allowedComponents.includes(component.name))
+      }
 
-const searchKeyword = ref('')
-const activeCategory = ref('all')
-const components = ref([])
+      if (this.activeCategory !== 'all') {
+        result = result.filter(component => component.category === this.activeCategory)
+      }
 
-// 过滤组件
-const filteredComponents = computed(() => {
-  let result = components.value
+      if (this.searchKeyword) {
+        const keyword = this.searchKeyword.toLowerCase()
+        result = result.filter(component => {
+          const nameMatch = component.name.toLowerCase().includes(keyword)
+          const labelMatch = component.label.toLowerCase().includes(keyword)
+          const descMatch =
+            component.description && component.description.toLowerCase().includes(keyword)
+          return nameMatch || labelMatch || descMatch
+        })
+      }
 
-  // 根据允许的组件过滤
-  if (props.allowedComponents.length > 0) {
-    result = result.filter(c => props.allowedComponents.includes(c.name))
-  }
-
-  // 根据分类过滤
-  if (activeCategory.value !== 'all') {
-    result = result.filter(c => c.category === activeCategory.value)
-  }
-
-  // 根据搜索关键词过滤
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(
-      c =>
-        c.name.toLowerCase().includes(keyword) ||
-        c.label.toLowerCase().includes(keyword) ||
-        (c.description && c.description.toLowerCase().includes(keyword))
-    )
-  }
-
-  return result
-})
-
-/**
- * 选择组件
- */
-function selectComponent(component) {
-  emit('select', {
-    component: component.name,
-    label: component.label,
-    props: component.defaultProps || {},
-  })
+      return result
+    },
+  },
+  mounted() {
+    this.loadComponents()
+  },
+  methods: {
+    async loadComponents() {
+      this.componentList = await getAllComponents()
+    },
+    selectComponent(component) {
+      this.$emit('select', {
+        component: component.name,
+        label: component.label,
+        props: component.defaultProps || {},
+      })
+    },
+    getComponentIcon(category) {
+      const icons = {
+        base: Edit,
+        business: Operation,
+        search: Search,
+      }
+      return icons[category] || Grid
+    },
+  },
 }
-
-/**
- * 获取组件图标
- */
-function getComponentIcon(category) {
-  const icons = {
-    base: Edit,
-    business: Operation,
-    search: Search,
-  }
-  return icons[category] || Grid
-}
-
-/**
- * 加载组件
- */
-async function loadComponents() {
-  components.value = await getAllComponents()
-}
-
-onMounted(() => {
-  loadComponents()
-})
 </script>

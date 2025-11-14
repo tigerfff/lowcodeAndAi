@@ -4,8 +4,15 @@
   </div>
 </template>
 
-<script setup>
+<script>
 import Editor from './views/Editor.vue'
+
+export default {
+  name: 'App',
+  components: {
+    Editor,
+  },
+}
 </script>
 
 <style>

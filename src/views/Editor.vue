@@ -313,8 +313,7 @@
   </div>
 </template>
 
-<script setup>
-import { computed, ref, watch } from 'vue'
+<script>
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Document,
@@ -326,6 +325,7 @@ import {
   Picture,
   Plus,
 } from '@element-plus/icons-vue'
+import { mapStores } from 'pinia'
 import { useEditorStore } from '../stores/editorStore'
 import TemplateSelector from '../components/TemplateSelector.vue'
 import ComponentConfig from '../components/ComponentConfig.vue'
@@ -334,216 +334,229 @@ import CodeGenerator from '../components/CodeGenerator.vue'
 import AiChatPanel from '../components/AiChatPanel.vue'
 import { sendChatMessages } from '../services/aiService'
 
-const editorStore = useEditorStore()
-
-const templateDrawerVisible = ref(false)
-const componentDrawerVisible = ref(false)
-const apiDrawerVisible = ref(false)
-const modelDialogVisible = ref(false)
-const activeMainTab = ref('code')
-
-const importDialogVisible = ref(false)
-const importConfigText = ref('')
-
-const imageDialogVisible = ref(false)
-const imageFileList = ref([])
-const imageBase64 = ref('')
-const imageDescription = ref('')
-const imageExtraPrompt = ref('')
-const imageModel = ref(editorStore.aiConfig.model || '')
-const imageLoading = ref(false)
-
-const commonModelOptions = ['qwen3-vl-plus', 'qwen-max', 'gpt-4', 'claude-3-5-sonnet-latest']
-
-const totalComponentCount = computed(() => {
-  const searchCount = editorStore.slots.searchArea?.length || 0
-  const actionCount = editorStore.slots.actionArea?.length || 0
-  const tableCount = editorStore.slots.tableColumns?.length || 0
-  return searchCount + actionCount + tableCount
-})
-
-const canAnalyzeImage = computed(
-  () => !!imageBase64.value && imageFileList.value.length > 0 && !imageLoading.value
-)
-
-watch(
-  () => editorStore.aiConfig.model,
-  newModel => {
-    if (!imageDialogVisible.value) {
-      imageModel.value = newModel || ''
+export default {
+  name: 'EditorView',
+  components: {
+    TemplateSelector,
+    ComponentConfig,
+    ApiConfig,
+    CodeGenerator,
+    AiChatPanel,
+    Document,
+    Setting,
+    Connection,
+    Download,
+    Upload,
+    RefreshLeft,
+    Picture,
+    Plus,
+  },
+  data() {
+    return {
+      templateDrawerVisible: false,
+      componentDrawerVisible: false,
+      apiDrawerVisible: false,
+      modelDialogVisible: false,
+      activeMainTab: 'code',
+      importDialogVisible: false,
+      importConfigText: '',
+      imageDialogVisible: false,
+      imageFileList: [],
+      imageBase64: '',
+      imageDescription: '',
+      imageExtraPrompt: '',
+      imageModel: '',
+      imageLoading: false,
+      commonModelOptions: ['qwen3-vl-plus', 'qwen-max', 'gpt-4', 'claude-3-5-sonnet-latest'],
+      documentIcon: Document,
+      settingIcon: Setting,
+      connectionIcon: Connection,
+      downloadIcon: Download,
+      uploadIcon: Upload,
+      refreshLeftIcon: RefreshLeft,
+      pictureIcon: Picture,
+      plusIcon: Plus,
     }
-  }
-)
-
-function openModelDialog() {
-  modelDialogVisible.value = true
-}
-
-function handleSaveModelConfig() {
-  editorStore.updateAiConfig({ ...editorStore.aiConfig })
-  ElMessage.success('AI 模型配置已保存')
-  modelDialogVisible.value = false
-}
-
-function handleExportConfig() {
-  const config = editorStore.exportConfig()
-  const jsonStr = JSON.stringify(config, null, 2)
-
-  const blob = new Blob([jsonStr], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `page-config-${Date.now()}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-
-  ElMessage.success('配置已导出')
-}
-
-function handleImportConfig() {
-  importConfigText.value = ''
-  importDialogVisible.value = true
-}
-
-async function confirmImportConfig() {
-  try {
-    const config = JSON.parse(importConfigText.value)
-    await editorStore.importConfig(config)
-    importDialogVisible.value = false
-    ElMessage.success('配置已导入')
-  } catch (error) {
-    ElMessage.error('配置格式错误: ' + error.message)
-  }
-}
-
-function handleReset() {
-  ElMessageBox.confirm('确定要重置所有配置吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      editorStore.reset()
-      ElMessage.success('已重置')
-    })
-    .catch(() => {})
-}
-
-function openImageDialog() {
-  resetImageDialogState()
-  imageModel.value = editorStore.aiConfig.model || ''
-  imageDialogVisible.value = true
-}
-
-function handleImageDialogClose() {
-  if (!imageLoading.value) {
-    resetImageDialogState()
-  }
-}
-
-function resetImageDialogState() {
-  imageFileList.value = []
-  imageBase64.value = ''
-  imageDescription.value = ''
-  imageExtraPrompt.value = ''
-  imageLoading.value = false
-}
-
-function setImageDataUrl(dataUrl, file) {
-  if (!dataUrl) return
-  imageBase64.value = dataUrl
-  imageFileList.value = [
-    {
-      name: file?.name || `image-${Date.now()}`,
-      url: dataUrl,
-      status: 'ready',
+  },
+  computed: {
+    ...mapStores(useEditorStore),
+    totalComponentCount() {
+      const searchCount = this.editorStore.slots.searchArea?.length || 0
+      const actionCount = this.editorStore.slots.actionArea?.length || 0
+      const tableCount = this.editorStore.slots.tableColumns?.length || 0
+      return searchCount + actionCount + tableCount
     },
-  ]
-}
-
-function handleImageBeforeUpload(file) {
-  if (!file.type.startsWith('image/')) {
-    ElMessage.error('仅支持上传图片文件')
-    return false
-  }
-  const reader = new FileReader()
-  reader.onload = () => {
-    let dataUrl = ''
-    if (typeof reader.result === 'string') {
-      dataUrl = reader.result
-    } else if (reader.result instanceof ArrayBuffer) {
-      const bytes = new Uint8Array(reader.result)
-      let binary = ''
-      bytes.forEach(b => {
-        binary += String.fromCharCode(b)
+    canAnalyzeImage() {
+      return !!this.imageBase64 && this.imageFileList.length > 0 && !this.imageLoading
+    },
+  },
+  watch: {
+    'editorStore.aiConfig.model'(newModel) {
+      if (!this.imageDialogVisible) {
+        this.imageModel = newModel || ''
+      }
+    },
+  },
+  created() {
+    this.imageModel = this.editorStore.aiConfig.model || ''
+    if (typeof this.editorStore.ensureTemplateSelected === 'function') {
+      this.editorStore.ensureTemplateSelected()
+    }
+  },
+  methods: {
+    openModelDialog() {
+      this.modelDialogVisible = true
+    },
+    handleSaveModelConfig() {
+      this.editorStore.updateAiConfig({ ...this.editorStore.aiConfig })
+      ElMessage.success('AI 模型配置已保存')
+      this.modelDialogVisible = false
+    },
+    handleExportConfig() {
+      const config = this.editorStore.exportConfig()
+      const jsonStr = JSON.stringify(config, null, 2)
+      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `page-config-${Date.now()}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('配置已导出')
+    },
+    handleImportConfig() {
+      this.importConfigText = ''
+      this.importDialogVisible = true
+    },
+    async confirmImportConfig() {
+      try {
+        const config = JSON.parse(this.importConfigText)
+        await this.editorStore.importConfig(config)
+        this.importDialogVisible = false
+        ElMessage.success('配置已导入')
+      } catch (error) {
+        ElMessage.error('配置格式错误: ' + error.message)
+      }
+    },
+    handleReset() {
+      ElMessageBox.confirm('确定要重置所有配置吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
       })
-      dataUrl = `data:${file.type};base64,${btoa(binary)}`
-    }
-    if (!dataUrl) {
-      ElMessage.error('图片读取失败，请重试')
-      return
-    }
-    setImageDataUrl(dataUrl, file)
-  }
-  reader.readAsDataURL(file)
-  return false
-}
+        .then(() => {
+          this.editorStore.reset()
+          ElMessage.success('已重置')
+        })
+        .catch(() => {})
+    },
+    openImageDialog() {
+      this.resetImageDialogState()
+      this.imageModel = this.editorStore.aiConfig.model || ''
+      this.imageDialogVisible = true
+    },
+    handleImageDialogClose() {
+      if (!this.imageLoading) {
+        this.resetImageDialogState()
+      }
+    },
+    resetImageDialogState() {
+      this.imageFileList = []
+      this.imageBase64 = ''
+      this.imageDescription = ''
+      this.imageExtraPrompt = ''
+      this.imageLoading = false
+    },
+    setImageDataUrl(dataUrl, file) {
+      if (!dataUrl) return
+      this.imageBase64 = dataUrl
+      this.imageFileList = [
+        {
+          name: file?.name || `image-${Date.now()}`,
+          url: dataUrl,
+          status: 'ready',
+        },
+      ]
+    },
+    handleImageBeforeUpload(file) {
+      if (!file.type.startsWith('image/')) {
+        ElMessage.error('仅支持上传图片文件')
+        return false
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        let dataUrl = ''
+        if (typeof reader.result === 'string') {
+          dataUrl = reader.result
+        } else if (reader.result instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(reader.result)
+          let binary = ''
+          bytes.forEach(b => {
+            binary += String.fromCharCode(b)
+          })
+          dataUrl = `data:${file.type};base64,${btoa(binary)}`
+        }
+        if (!dataUrl) {
+          ElMessage.error('图片读取失败，请重试')
+          return
+        }
+        this.setImageDataUrl(dataUrl, file)
+      }
+      reader.readAsDataURL(file)
+      return false
+    },
+    handleImageChange(uploadFile) {
+      const rawFile = uploadFile?.raw
+      if (!rawFile) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = typeof reader.result === 'string' ? reader.result : ''
+        if (!dataUrl) {
+          ElMessage.error('图片读取失败，请重试')
+          return
+        }
+        this.setImageDataUrl(dataUrl, rawFile)
+      }
+      reader.readAsDataURL(rawFile)
+    },
+    handleImageRemove() {
+      this.imageFileList = []
+      this.imageBase64 = ''
+    },
+    extractJsonFromResponse(text) {
+      if (!text || typeof text !== 'string') {
+        throw new Error('AI 没有返回有效内容')
+      }
+      let cleaned = text.trim()
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+      }
+      const firstBrace = cleaned.indexOf('{')
+      const lastBrace = cleaned.lastIndexOf('}')
+      if (firstBrace === -1 || lastBrace === -1) {
+        throw new Error('未解析到 JSON 结构')
+      }
+      cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+      return JSON.parse(cleaned)
+    },
+    async handleAnalyzeImage() {
+      if (!this.imageBase64) {
+        ElMessage.error('请先上传页面截图')
+        return
+      }
+      if (!this.editorStore.aiConfig.baseUrl || !this.editorStore.aiConfig.apiKey) {
+        ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
+        this.openModelDialog()
+        return
+      }
+      const chosenModel = (this.imageModel || this.editorStore.aiConfig.model || '').trim()
+      if (!chosenModel) {
+        ElMessage.error('请指定用于解析图片的模型')
+        return
+      }
 
-function handleImageChange(uploadFile) {
-  const rawFile = uploadFile?.raw
-  if (!rawFile) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    const dataUrl = typeof reader.result === 'string' ? reader.result : ''
-    if (!dataUrl) {
-      ElMessage.error('图片读取失败，请重试')
-      return
-    }
-    setImageDataUrl(dataUrl, rawFile)
-  }
-  reader.readAsDataURL(rawFile)
-}
-
-function handleImageRemove() {
-  imageFileList.value = []
-  imageBase64.value = ''
-}
-
-function extractJsonFromResponse(text) {
-  if (!text || typeof text !== 'string') {
-    throw new Error('AI 没有返回有效内容')
-  }
-  let cleaned = text.trim()
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-  }
-  const firstBrace = cleaned.indexOf('{')
-  const lastBrace = cleaned.lastIndexOf('}')
-  if (firstBrace === -1 || lastBrace === -1) {
-    throw new Error('未解析到 JSON 结构')
-  }
-  cleaned = cleaned.slice(firstBrace, lastBrace + 1)
-  return JSON.parse(cleaned)
-}
-
-async function handleAnalyzeImage() {
-  if (!imageBase64.value) {
-    ElMessage.error('请先上传页面截图')
-    return
-  }
-  if (!editorStore.aiConfig.baseUrl || !editorStore.aiConfig.apiKey) {
-    ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
-    openModelDialog()
-    return
-  }
-  const chosenModel = (imageModel.value || editorStore.aiConfig.model || '').trim()
-  if (!chosenModel) {
-    ElMessage.error('请指定用于解析图片的模型')
-    return
-  }
-
-  const templateLabel = editorStore.selectedTemplate?.label || '标准列表页'
-  const structureGuide = `你是一个界面组件识别助手。请根据上传的页面截图和描述，推断 ${templateLabel} 模板所需的搜索区、操作区和表格列组件配置。
+      const templateLabel = this.editorStore.selectedTemplate?.label || '标准列表页'
+      const structureGuide = `你是一个界面组件识别助手。请根据上传的页面截图和描述，推断 ${templateLabel} 模板所需的搜索区、操作区和表格列组件配置。
 
 输出必须是合法的 JSON，且不要返回任何额外解释。
 推荐的 JSON 结构：
@@ -596,58 +609,60 @@ async function handleAnalyzeImage() {
 }
 如果无法判断某个字段，请留空字符串或使用 null，并确保返回合法 JSON。`
 
-  const userSegments = []
-  if (imageDescription.value.trim()) {
-    userSegments.push(`界面描述：${imageDescription.value.trim()}`)
-  }
-  if (imageExtraPrompt.value.trim()) {
-    userSegments.push(`额外提示：${imageExtraPrompt.value.trim()}`)
-  }
-  if (editorStore.customPrompt) {
-    userSegments.push(`全局提示：${editorStore.customPrompt}`)
-  }
-  userSegments.push('请结合上述截图生成 JSON。')
+      const userSegments = []
+      if (this.imageDescription.trim()) {
+        userSegments.push(`界面描述：${this.imageDescription.trim()}`)
+      }
+      if (this.imageExtraPrompt.trim()) {
+        userSegments.push(`额外提示：${this.imageExtraPrompt.trim()}`)
+      }
+      if (this.editorStore.customPrompt) {
+        userSegments.push(`全局提示：${this.editorStore.customPrompt}`)
+      }
+      userSegments.push('请结合上述截图生成 JSON。')
 
-  const messages = [
-    {
-      role: 'system',
-      content: [{ type: 'text', text: structureGuide }],
-    },
-    {
-      role: 'user',
-      content: [
+      const messages = [
         {
-          type: 'image_url',
-          image_url: {
-            url: imageBase64.value,
-            detail: 'high',
-          },
+          role: 'system',
+          content: [{ type: 'text', text: structureGuide }],
         },
         {
-          type: 'text',
-          text: userSegments.join('\n\n'),
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: this.imageBase64,
+                detail: 'high',
+              },
+            },
+            {
+              type: 'text',
+              text: userSegments.join('\n\n'),
+            },
+          ],
         },
-      ],
-    },
-  ]
+      ]
 
-  imageLoading.value = true
-  try {
-    const reply = await sendChatMessages({
-      messages,
-      aiConfig: { ...editorStore.aiConfig, model: chosenModel },
-    })
-    const suggestion = extractJsonFromResponse(reply)
-    editorStore.applyComponentSuggestion(suggestion)
-    ElMessage.success('已根据图片生成组件配置，请到组件配置中查看并调整')
-    imageDialogVisible.value = false
-    resetImageDialogState()
-  } catch (error) {
-    console.error('Image analysis failed:', error)
-    ElMessage.error(error.message || '图片解析失败，请稍后重试')
-  } finally {
-    imageLoading.value = false
-  }
+      this.imageLoading = true
+      try {
+        const reply = await sendChatMessages({
+          messages,
+          aiConfig: { ...this.editorStore.aiConfig, model: chosenModel },
+        })
+        const suggestion = this.extractJsonFromResponse(reply)
+        this.editorStore.applyComponentSuggestion(suggestion)
+        ElMessage.success('已根据图片生成组件配置，请到组件配置中查看并调整')
+        this.imageDialogVisible = false
+        this.resetImageDialogState()
+      } catch (error) {
+        console.error('Image analysis failed:', error)
+        ElMessage.error(error.message || '图片解析失败，请稍后重试')
+      } finally {
+        this.imageLoading = false
+      }
+    },
+  },
 }
 </script>
 

@@ -115,66 +115,60 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script>
 import { ElMessage } from 'element-plus'
 import { Plus, Delete, Document } from '@element-plus/icons-vue'
+import { mapStores } from 'pinia'
 import { useEditorStore } from '../stores/editorStore'
 
-const editorStore = useEditorStore()
-const activeApis = ref([])
+export default {
+  name: 'ApiConfig',
+  data() {
+    return {
+      activeApis: [],
+      Plus,
+      Delete,
+      Document,
+    }
+  },
+  computed: {
+    ...mapStores(useEditorStore),
+  },
+  methods: {
+    handleAddApi() {
+      this.editorStore.addApiConfig()
+      const lastApi = this.editorStore.apiConfigs[this.editorStore.apiConfigs.length - 1]
+      if (lastApi) {
+        this.activeApis.push(lastApi.id)
+      }
+    },
+    handleRemoveApi(apiId) {
+      this.editorStore.removeApiConfig(apiId)
+      ElMessage.success('已删除 API 配置')
+    },
+    updateApi(apiId, updates) {
+      this.editorStore.updateApiConfig(apiId, updates)
+    },
+    validateJson(apiId, field) {
+      const api = this.editorStore.apiConfigs.find(a => a.id === apiId)
+      if (!api) return
 
-/**
- * 添加 API
- */
-function handleAddApi() {
-  editorStore.addApiConfig()
-  // 自动展开新添加的 API
-  const lastApi = editorStore.apiConfigs[editorStore.apiConfigs.length - 1]
-  if (lastApi) {
-    activeApis.value.push(lastApi.id)
-  }
-}
+      const value = api[field]
+      if (!value || value.trim() === '') {
+        this.updateApi(apiId, { [`_${field.replace('Example', '')}Error`]: '' })
+        return
+      }
 
-/**
- * 移除 API
- */
-function handleRemoveApi(apiId) {
-  editorStore.removeApiConfig(apiId)
-  ElMessage.success('已删除 API 配置')
-}
-
-/**
- * 更新 API
- */
-function updateApi(apiId, updates) {
-  editorStore.updateApiConfig(apiId, updates)
-}
-
-/**
- * 验证 JSON 格式
- */
-function validateJson(apiId, field) {
-  const api = editorStore.apiConfigs.find(a => a.id === apiId)
-  if (!api) return
-
-  const value = api[field]
-  if (!value || value.trim() === '') {
-    // 清空错误
-    updateApi(apiId, { [`_${field.replace('Example', '')}Error`]: '' })
-    return
-  }
-
-  try {
-    JSON.parse(value)
-    // 清空错误
-    updateApi(apiId, { [`_${field.replace('Example', '')}Error`]: '' })
-  } catch (error) {
-    // 显示错误
-    updateApi(apiId, {
-      [`_${field.replace('Example', '')}Error`]: `JSON 格式错误: ${error.message}`,
-    })
-  }
+      try {
+        JSON.parse(value)
+        this.updateApi(apiId, { [`_${field.replace('Example', '')}Error`]: '' })
+      } catch (error) {
+        this.updateApi(apiId, {
+          [`_${field.replace('Example', '')}Error`]: `JSON 格式错误: ${error.message}`,
+        })
+      }
+    },
+  },
 }
 </script>
 

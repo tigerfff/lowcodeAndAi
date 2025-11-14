@@ -15,7 +15,7 @@
         <el-button type="primary" size="large" :icon="MagicStick" @click="handleGenerate">
           开始生成
         </el-button>
-      </div>  
+      </div>
     </el-card>
 
     <!-- 生成中 -->
@@ -168,8 +168,7 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script>
 import { ElMessage } from 'element-plus'
 import {
   DocumentAdd,
@@ -181,180 +180,167 @@ import {
   Download,
   Refresh,
 } from '@element-plus/icons-vue'
+import { mapStores } from 'pinia'
 import { useEditorStore } from '../stores/editorStore'
 import { generateCode } from '../services/codeGenerator'
 import CodePreviewDialog from './CodePreviewDialog.vue'
 
-const emit = defineEmits(['request-ai-config'])
-
-const editorStore = useEditorStore()
-const generating = ref(false)
-const showPreviewDialog = ref(false)
-const generationStatus = ref([])
-
-const generationResult = ref(null)
-
-const customPromptText = computed({
-  get: () => editorStore.customPrompt,
-  set: val => editorStore.setCustomPrompt(val),
-})
-
-// 代码统计
-const codeStats = computed(() => {
-  const code = editorStore.generatedCode
-  return {
-    lines: code ? code.split('\n').length : 0,
-    components:
-      (editorStore.slots.searchArea?.length || 0) +
-      (editorStore.slots.actionArea?.length || 0) +
-      (editorStore.slots.tableColumns?.length || 0),
-    apis: editorStore.apiConfigs?.length || 0,
-  }
-})
-
-/**
- * 生成代码
- */
-async function handleGenerate() {
-  // 检查 AI 配置
-  if (!editorStore.aiConfig.baseUrl || !editorStore.aiConfig.apiKey) {
-    ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
-    emit('request-ai-config')
-    return
-  }
-
-  if (!editorStore.selectedTemplate?.id) {
-    ElMessage.error('请先选择页面模板')
-    return
-  }
-
-  generating.value = true
-  generationResult.value = null
-  generationStatus.value = [
-    { text: '正在构建 AI Prompt...', done: false },
-    { text: '正在调用 AI 模型生成代码...', done: false },
-    { text: '正在验证代码...', done: false },
-  ]
-
-  try {
-    // Step 1: 构建 Prompt
-    generationStatus.value[0].done = true
-    await new Promise(resolve => setTimeout(resolve, 300))
-
-    // 构建配置
-    const config = {
-      templateId: editorStore.selectedTemplate.id,
-      pageName: editorStore.pageInfo.pageName,
-      description: editorStore.pageInfo.title,
-      pageInfo: editorStore.pageInfo,
-      breadcrumb: editorStore.pageInfo.breadcrumb,
-      apiConfigs: editorStore.apiConfigs,
-      aiConfig: editorStore.aiConfig,
-      slots: editorStore.slots,
-      customPrompt: customPromptText.value,
-      pagination: {
-        enabled: true,
-        pageNoField: 'pageNo',
-        pageSizeField: 'pageSize',
-        pageSizes: [10, 20, 50, 100],
+export default {
+  name: 'CodeGenerator',
+  components: {
+    DocumentAdd,
+    Loading,
+    CircleCheck,
+    CodePreviewDialog,
+  },
+  emits: ['request-ai-config'],
+  data() {
+    return {
+      generating: false,
+      showPreviewDialog: false,
+      generationStatus: [],
+      generationResult: null,
+      MagicStick,
+      View,
+      CopyDocument,
+      Download,
+      Refresh,
+    }
+  },
+  computed: {
+    ...mapStores(useEditorStore),
+    codeStats() {
+      const code = this.editorStore.generatedCode
+      return {
+        lines: code ? code.split('\n').length : 0,
+        components:
+          (this.editorStore.slots.searchArea?.length || 0) +
+          (this.editorStore.slots.actionArea?.length || 0) +
+          (this.editorStore.slots.tableColumns?.length || 0),
+        apis: this.editorStore.apiConfigs?.length || 0,
+      }
+    },
+    customPromptText: {
+      get() {
+        return this.editorStore.customPrompt
       },
-    }
-
-    // Step 2: 生成代码
-    const result = await generateCode(config, { useAI: true })
-    generationStatus.value[1].done = true
-    await new Promise(resolve => setTimeout(resolve, 300))
-
-    // Step 3: 验证代码
-    generationStatus.value[2].done = true
-    generationResult.value = result
-
-    if (result.success) {
-      editorStore.setGeneratedCode(result.code)
-
-      // 显示生成结果
-      if (result.method === 'ai') {
-        ElMessage.success({
-          message: '✨ AI 代码生成成功！',
-          duration: 3000,
-        })
-      } else if (result.method === 'template') {
-        ElMessage.warning({
-          message: '⚠️ 使用模板生成（AI 生成失败）',
-          duration: 3000,
-        })
+      set(val) {
+        this.editorStore.setCustomPrompt(val)
+      },
+    },
+  },
+  methods: {
+    async handleGenerate() {
+      if (!this.editorStore.aiConfig.baseUrl || !this.editorStore.aiConfig.apiKey) {
+        ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
+        this.$emit('request-ai-config')
+        return
       }
 
-      // 显示验证警告
-      if (result.validation && result.validation.issues.length > 0) {
-        const warnings = result.validation.issues.filter(i => i.type === 'warning')
-        if (warnings.length > 0) {
-          console.warn('Code validation warnings:', warnings)
+      if (!this.editorStore.selectedTemplate?.id) {
+        ElMessage.error('请先选择页面模板')
+        return
+      }
+
+      this.generating = true
+      this.generationResult = null
+      this.generationStatus = [
+        { text: '正在构建 AI Prompt...', done: false },
+        { text: '正在调用 AI 模型生成代码...', done: false },
+        { text: '正在验证代码...', done: false },
+      ]
+
+      try {
+        this.generationStatus[0].done = true
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        const config = {
+          templateId: this.editorStore.selectedTemplate.id,
+          pageName: this.editorStore.pageInfo.pageName,
+          description: this.editorStore.pageInfo.title,
+          pageInfo: this.editorStore.pageInfo,
+          breadcrumb: this.editorStore.pageInfo.breadcrumb,
+          apiConfigs: this.editorStore.apiConfigs,
+          aiConfig: this.editorStore.aiConfig,
+          slots: this.editorStore.slots,
+          customPrompt: this.customPromptText,
+          pagination: {
+            enabled: true,
+            pageNoField: 'pageNo',
+            pageSizeField: 'pageSize',
+            pageSizes: [10, 20, 50, 100],
+          },
         }
+
+        const result = await generateCode(config, { useAI: true })
+        this.generationStatus[1].done = true
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        this.generationStatus[2].done = true
+        this.generationResult = result
+
+        if (result.success) {
+          this.editorStore.setGeneratedCode(result.code)
+
+          if (result.method === 'ai') {
+            ElMessage.success({ message: '✨ AI 代码生成成功！', duration: 3000 })
+          } else if (result.method === 'template') {
+            ElMessage.warning({ message: '⚠️ 使用模板生成（AI 生成失败）', duration: 3000 })
+          }
+
+          if (result.validation && result.validation.issues.length > 0) {
+            const warnings = result.validation.issues.filter(issue => issue.type === 'warning')
+            if (warnings.length > 0) {
+              console.warn('Code validation warnings:', warnings)
+            }
+          }
+        } else {
+          throw new Error(result.error)
+        }
+      } catch (error) {
+        console.error('Code generation failed:', error)
+        ElMessage.error({
+          message: '❌ 代码生成失败: ' + error.message,
+          duration: 5000,
+        })
+      } finally {
+        this.generating = false
       }
-    } else {
-      throw new Error(result.error)
-    }
-  } catch (error) {
-    console.error('Code generation failed:', error)
-    ElMessage.error({
-      message: '❌ 代码生成失败: ' + error.message,
-      duration: 5000,
-    })
-  } finally {
-    generating.value = false
-  }
-}
-
-/**
- * 重新生成
- */
-function handleRegenerate() {
-  editorStore.setGeneratedCode('')
-  handleGenerate()
-}
-
-/**
- * 复制代码
- */
-async function handleCopyCode() {
-  try {
-    await navigator.clipboard.writeText(editorStore.generatedCode)
-    ElMessage.success('代码已复制到剪贴板')
-  } catch (error) {
-    console.error('Copy code failed:', error)
-    ElMessage.error('复制失败')
-  }
-}
-
-/**
- * 复制提示词
- */
-async function handleCopyPrompt() {
-  if (!generationResult.value?.prompt) {
-    return
-  }
-  try {
-    await navigator.clipboard.writeText(generationResult.value.prompt)
-    ElMessage.success('提示词已复制')
-  } catch (error) {
-    console.error('Copy prompt failed:', error)
-    ElMessage.error('复制失败')
-  }
-}
-
-/**
- * 下载代码
- */
-function handleDownloadCode() {
-  const blob = new Blob([editorStore.generatedCode], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${editorStore.pageInfo.pageName || 'Page'}.vue`
-  a.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('代码已下载')
+    },
+    handleRegenerate() {
+      this.editorStore.setGeneratedCode('')
+      this.handleGenerate()
+    },
+    async handleCopyCode() {
+      try {
+        await navigator.clipboard.writeText(this.editorStore.generatedCode)
+        ElMessage.success('代码已复制到剪贴板')
+      } catch (error) {
+        console.error('Copy code failed:', error)
+        ElMessage.error('复制失败')
+      }
+    },
+    async handleCopyPrompt() {
+      if (!this.generationResult?.prompt) return
+      try {
+        await navigator.clipboard.writeText(this.generationResult.prompt)
+        ElMessage.success('提示词已复制')
+      } catch (error) {
+        console.error('Copy prompt failed:', error)
+        ElMessage.error('复制失败')
+      }
+    },
+    handleDownloadCode() {
+      const blob = new Blob([this.editorStore.generatedCode], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${this.editorStore.pageInfo.pageName || 'Page'}.vue`
+      a.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('代码已下载')
+    },
+  },
 }
 </script>
 

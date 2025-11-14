@@ -169,230 +169,234 @@
   </div>
 </template>
 
-<script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+<script>
 import { ElMessage } from 'element-plus'
 import { ChatLineRound, Picture } from '@element-plus/icons-vue'
+import { mapStores } from 'pinia'
 import { useEditorStore } from '../stores/editorStore'
 import { sendChatMessages } from '../services/aiService'
 
-const emit = defineEmits(['request-ai-config'])
-
-const editorStore = useEditorStore()
-const draftMessage = ref('')
-const sending = ref(false)
-const messageScroll = ref(null)
-const pendingAttachments = ref([])
-const fileInput = ref(null)
-const modelValue = ref(editorStore.aiConfig.model || '')
-
-const systemPrompt = computed(() => {
-  const templateLabel = editorStore.selectedTemplate?.label || '通用页面'
-  const apiCount = editorStore.apiConfigs.length
-  return `你是一名资深的前端工程师，擅长基于 Vue3 + Element Plus + hui-pro 体系进行页面设计和代码生成。
+export default {
+  name: 'AiChatPanel',
+  components: {
+    ChatLineRound,
+    Picture,
+  },
+  emits: ['request-ai-config'],
+  data() {
+    return {
+      draftMessage: '',
+      sending: false,
+      pendingAttachments: [],
+      modelValue: '',
+      Picture,
+    }
+  },
+  computed: {
+    ...mapStores(useEditorStore),
+    systemPrompt() {
+      const templateLabel = this.editorStore.selectedTemplate?.label || '通用页面'
+      const apiCount = this.editorStore.apiConfigs.length
+      const searchCount = this.editorStore.slots.searchArea.length
+      const actionCount = this.editorStore.slots.actionArea.length
+      const tableCount = this.editorStore.slots.tableColumns.length
+      return `你是一名资深的前端工程师，擅长基于 Vue3 + Element Plus + hui-pro 体系进行页面设计和代码生成。
 
 当前项目背景：
 - 页面模板：${templateLabel}
-- 已配置组件数量：${editorStore.slots.searchArea.length + editorStore.slots.actionArea.length + editorStore.slots.tableColumns.length}
+- 已配置组件数量：${searchCount + actionCount + tableCount}
 - API 接口数量：${apiCount}
 
 请结合这些信息提供专业、实用的建议或代码示例。必要时可以使用列表、代码块等格式化输出，但要保持回答简洁明确。`
-})
-
-watch(
-  () => editorStore.chatMessages.length,
-  async () => {
-    await nextTick()
-    scrollToBottom()
-  }
-)
-
-watch(
-  () => editorStore.aiConfig.model,
-  newModel => {
-    if (newModel !== modelValue.value) {
-      modelValue.value = newModel || ''
-    }
-  }
-)
-
-function scrollToBottom() {
-  const wrap = messageScroll.value?.wrapRef
-  if (wrap) {
-    wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' })
-  }
-}
-
-function formatTimestamp(timestamp) {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return `${date.getHours().toString().padStart(2, '0')}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, '0')}`
-}
-
-async function handleSend() {
-  const text = draftMessage.value.trim()
-  if (!text && pendingAttachments.value.length === 0) return
-
-  if (!editorStore.aiConfig.baseUrl || !editorStore.aiConfig.apiKey) {
-    ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
-    emit('request-ai-config')
-    return
-  }
-
-  const attachmentsSnapshot = pendingAttachments.value.map(file => ({ ...file }))
-
-  const userMessage = {
-    role: 'user',
-    text,
-    attachments: attachmentsSnapshot,
-    createdAt: Date.now(),
-  }
-
-  editorStore.appendChatMessage(userMessage)
-  draftMessage.value = ''
-  pendingAttachments.value = []
-  sending.value = true
-
-  try {
-    const messages = [
-      { role: 'system', content: [{ type: 'text', text: systemPrompt.value }] },
-      ...editorStore.chatMessages.map(convertMessageToPayload),
-    ]
-
-    const reply = await sendChatMessages({
-      messages,
-      aiConfig: editorStore.aiConfig,
-    })
-
-    let replyText = ''
-    if (Array.isArray(reply)) {
-      replyText = reply
-        .map(item => {
-          if (typeof item === 'string') return item
-          if (item && typeof item === 'object') {
-            return item.text || item.content || ''
-          }
-          return ''
-        })
-        .filter(Boolean)
-        .join('\n')
-    } else if (typeof reply === 'string') {
-      replyText = reply
-    } else if (reply && typeof reply === 'object') {
-      try {
-        replyText = JSON.stringify(reply)
-      } catch {
-        replyText = '[无法解析的响应]'
+    },
+  },
+  watch: {
+    'editorStore.chatMessages.length'() {
+      this.$nextTick(() => {
+        this.scrollToBottom()
+      })
+    },
+    'editorStore.aiConfig.model'(newModel) {
+      if (newModel !== this.modelValue) {
+        this.modelValue = newModel || ''
       }
-    }
+    },
+  },
+  mounted() {
+    this.modelValue = this.editorStore.aiConfig.model || ''
+  },
+  methods: {
+    scrollToBottom() {
+      const wrap = this.$refs.messageScroll?.wrapRef
+      if (wrap) {
+        wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' })
+      }
+    },
+    formatTimestamp(timestamp) {
+      if (!timestamp) return ''
+      const date = new Date(timestamp)
+      return `${date.getHours().toString().padStart(2, '0')}:${date
+        .getMinutes()
+        .toString()
+        .padStart(2, '0')}`
+    },
+    async handleSend() {
+      const text = this.draftMessage.trim()
+      if (!text && this.pendingAttachments.length === 0) return
 
-    editorStore.appendChatMessage({
-      role: 'assistant',
-      text: replyText,
-      createdAt: Date.now(),
-    })
-  } catch (error) {
-    ElMessage.error(error.message || '对话请求失败，请稍后重试')
-  } finally {
-    sending.value = false
-  }
-}
+      if (!this.editorStore.aiConfig.baseUrl || !this.editorStore.aiConfig.apiKey) {
+        ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
+        this.$emit('request-ai-config')
+        return
+      }
 
-function handleClear() {
-  editorStore.clearChatMessages()
-  pendingAttachments.value = []
-}
+      const attachmentsSnapshot = this.pendingAttachments.map(file => ({ ...file }))
 
-function handleModelBlur() {
-  const trimmed = modelValue.value.trim()
-  if (trimmed && trimmed !== editorStore.aiConfig.model) {
-    editorStore.updateAiConfig({ model: trimmed })
-  } else if (!trimmed && editorStore.aiConfig.model) {
-    modelValue.value = editorStore.aiConfig.model
-  }
-}
+      const userMessage = {
+        role: 'user',
+        text,
+        attachments: attachmentsSnapshot,
+        createdAt: Date.now(),
+      }
 
-function handleModelCommit() {
-  handleModelBlur()
-}
+      this.editorStore.appendChatMessage(userMessage)
+      this.draftMessage = ''
+      this.pendingAttachments = []
+      this.sending = true
 
-function triggerImageSelect() {
-  fileInput.value?.click()
-}
+      try {
+        const messages = [
+          { role: 'system', content: [{ type: 'text', text: this.systemPrompt }] },
+          ...this.editorStore.chatMessages.map(message => this.convertMessageToPayload(message)),
+        ]
 
-function handleFileSelect(event) {
-  const files = Array.from(event.target.files || [])
-  if (files.length === 0) return
+        const reply = await sendChatMessages({
+          messages,
+          aiConfig: this.editorStore.aiConfig,
+        })
 
-  files.forEach(file => {
-    if (!file.type.startsWith('image/')) {
-      ElMessage.error('仅支持图片格式')
-      return
-    }
+        let replyText = ''
+        if (Array.isArray(reply)) {
+          replyText = reply
+            .map(item => {
+              if (typeof item === 'string') return item
+              if (item && typeof item === 'object') {
+                return item.text || item.content || ''
+              }
+              return ''
+            })
+            .filter(Boolean)
+            .join('\n')
+        } else if (typeof reply === 'string') {
+          replyText = reply
+        } else if (reply && typeof reply === 'object') {
+          try {
+            replyText = JSON.stringify(reply)
+          } catch (error) {
+            console.error('Failed to stringify AI reply:', error)
+            replyText = '[无法解析的响应]'
+          }
+        }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      pendingAttachments.value.push({
-        uid: `${file.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        name: file.name,
-        type: file.type,
-        dataUrl: reader.result,
+        this.editorStore.appendChatMessage({
+          role: 'assistant',
+          text: replyText,
+          createdAt: Date.now(),
+        })
+      } catch (error) {
+        ElMessage.error(error.message || '对话请求失败，请稍后重试')
+      } finally {
+        this.sending = false
+      }
+    },
+    handleClear() {
+      this.editorStore.clearChatMessages()
+      this.pendingAttachments = []
+    },
+    handleModelBlur() {
+      const trimmed = this.modelValue.trim()
+      if (trimmed && trimmed !== this.editorStore.aiConfig.model) {
+        this.editorStore.updateAiConfig({ model: trimmed })
+      } else if (!trimmed && this.editorStore.aiConfig.model) {
+        this.modelValue = this.editorStore.aiConfig.model
+      }
+    },
+    handleModelCommit() {
+      this.handleModelBlur()
+    },
+    triggerImageSelect() {
+      this.$refs.fileInput?.click()
+    },
+    handleFileSelect(event) {
+      const files = Array.from(event.target.files || [])
+      if (files.length === 0) return
+
+      files.forEach(file => {
+        if (!file.type.startsWith('image/')) {
+          ElMessage.error('仅支持图片格式')
+          return
+        }
+
+        const reader = new FileReader()
+        reader.onload = () => {
+          this.pendingAttachments.push({
+            uid: `${file.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            name: file.name,
+            type: file.type,
+            dataUrl: reader.result,
+          })
+        }
+        reader.readAsDataURL(file)
       })
-    }
-    reader.readAsDataURL(file)
-  })
 
-  event.target.value = ''
-}
+      event.target.value = ''
+    },
+    removeAttachment(uid) {
+      this.pendingAttachments = this.pendingAttachments.filter(file => file.uid !== uid)
+    },
+    convertMessageToPayload(message) {
+      const parts = []
+      if (message.attachments && message.attachments.length > 0) {
+        message.attachments.forEach(file => {
+          parts.push({
+            type: 'image_url',
+            image_url: {
+              url: file.dataUrl || file.url,
+            },
+          })
+        })
+      } else if (message.images && message.images.length > 0) {
+        message.images.forEach(file => {
+          parts.push({
+            type: 'image_url',
+            image_url: {
+              url: file.dataUrl || file.url,
+            },
+          })
+        })
+      }
 
-function removeAttachment(uid) {
-  pendingAttachments.value = pendingAttachments.value.filter(file => file.uid !== uid)
-}
+      const textContent = message.text || message.content
+      if (textContent) {
+        parts.push({
+          type: 'text',
+          text: textContent,
+        })
+      }
 
-function convertMessageToPayload(message) {
-  const parts = []
-  if (message.attachments && message.attachments.length > 0) {
-    message.attachments.forEach(file => {
-      parts.push({
-        type: 'image_url',
-        image_url: {
-          url: file.dataUrl || file.url,
-        },
-      })
-    })
-  } else if (message.images && message.images.length > 0) {
-    message.images.forEach(file => {
-      parts.push({
-        type: 'image_url',
-        image_url: {
-          url: file.dataUrl || file.url,
-        },
-      })
-    })
-  }
+      if (parts.length === 0) {
+        parts.push({
+          type: 'text',
+          text: '',
+        })
+      }
 
-  const textContent = message.text || message.content
-  if (textContent) {
-    parts.push({
-      type: 'text',
-      text: textContent,
-    })
-  }
-
-  if (parts.length === 0) {
-    parts.push({
-      type: 'text',
-      text: '',
-    })
-  }
-
-  return {
-    role: message.role,
-    content: parts,
-  }
+      return {
+        role: message.role,
+        content: parts,
+      }
+    },
+  },
 }
 </script>
 

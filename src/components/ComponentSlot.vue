@@ -6,12 +6,12 @@
           <el-icon><component :is="icon" /></el-icon>
           <span class="font-semibold">{{ title }}</span>
           <el-tag v-if="maxCount" size="small" type="info">
-            {{ components.length }} / {{ maxCount }}
+            {{ slotComponents.length }} / {{ maxCount }}
           </el-tag>
         </div>
         <el-button
           :icon="Plus"
-          :disabled="maxCount && components.length >= maxCount"
+          :disabled="maxCount && slotComponents.length >= maxCount"
           size="small"
           @click="handleAddComponent"
         >
@@ -21,9 +21,9 @@
     </template>
 
     <!-- 组件列表 -->
-    <div v-if="components.length > 0" class="space-y-3">
+    <div v-if="slotComponents.length > 0" class="space-y-3">
       <div
-        v-for="(component, index) in components"
+        v-for="(component, index) in slotComponents"
         :key="component.id"
         class="flex items-center gap-3 rounded-lg border border-gray-200 p-3 hover:border-primary"
       >
@@ -45,71 +45,72 @@
   </el-card>
 </template>
 
-<script setup>
-import { computed, inject } from 'vue'
-import { Search, Operation, Grid, Plus, Delete } from '@element-plus/icons-vue'
+<script>
 import { ElMessageBox } from 'element-plus'
+import { Search, Operation, Grid, Plus, Delete } from '@element-plus/icons-vue'
+import { mapStores } from 'pinia'
 import { useEditorStore } from '../stores/editorStore'
 import { getComponentByName } from '../services/componentLibrary'
 
-const props = defineProps({
-  slotName: {
-    type: String,
-    required: true,
+export default {
+  name: 'ComponentSlot',
+  components: {
+    Search,
+    Operation,
+    Grid,
+    Plus,
+    Delete,
   },
-  title: {
-    type: String,
-    required: true,
+  inject: ['openComponentSelector'],
+  props: {
+    slotName: {
+      type: String,
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    icon: {
+      type: String,
+      default: 'Grid',
+    },
+    maxCount: {
+      type: Number,
+      default: null,
+    },
+    allowedComponents: {
+      type: Array,
+      default: () => [],
+    },
   },
-  icon: {
-    type: String,
-    default: 'Grid',
+  computed: {
+    ...mapStores(useEditorStore),
+    slotComponents() {
+      return this.editorStore.slots[this.slotName] || []
+    },
   },
-  maxCount: {
-    type: Number,
-    default: null,
+  methods: {
+    handleAddComponent() {
+      if (this.openComponentSelector) {
+        this.openComponentSelector(this.slotName, this.allowedComponents)
+      }
+    },
+    handleRemoveComponent(componentId) {
+      ElMessageBox.confirm('确定要删除这个组件吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(() => {
+          this.editorStore.removeComponent(this.slotName, componentId)
+        })
+        .catch(() => {})
+    },
+    getComponentLabel(componentName) {
+      const component = getComponentByName(componentName)
+      return component?.label || componentName
+    },
   },
-  allowedComponents: {
-    type: Array,
-    default: () => [],
-  },
-})
-
-const editorStore = useEditorStore()
-const openComponentSelector = inject('openComponentSelector')
-
-// 当前 slot 的组件列表
-const components = computed(() => {
-  return editorStore.slots[props.slotName] || []
-})
-
-/**
- * 添加组件
- */
-function handleAddComponent() {
-  openComponentSelector(props.slotName, props.allowedComponents)
-}
-
-/**
- * 移除组件
- */
-function handleRemoveComponent(componentId) {
-  ElMessageBox.confirm('确定要删除这个组件吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      editorStore.removeComponent(props.slotName, componentId)
-    })
-    .catch(() => {})
-}
-
-/**
- * 获取组件显示名称
- */
-function getComponentLabel(componentName) {
-  const component = getComponentByName(componentName)
-  return component?.label || componentName
 }
 </script>

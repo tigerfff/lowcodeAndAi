@@ -79,35 +79,45 @@
   </div>
 </template>
 
-<script setup>
-import { ref, provide } from 'vue'
+<script>
+import { mapStores } from 'pinia'
 import { InfoFilled } from '@element-plus/icons-vue'
 import { useEditorStore } from '../stores/editorStore'
 import ComponentSlot from './ComponentSlot.vue'
 import ComponentSelector from './ComponentSelector.vue'
 
-const editorStore = useEditorStore()
-const componentSelectorVisible = ref(false)
-const currentSlotName = ref('')
-const currentAllowedComponents = ref([])
-
-/**
- * 打开组件选择器
- */
-function openComponentSelector(slotName, allowedComponents) {
-  currentSlotName.value = slotName
-  currentAllowedComponents.value = allowedComponents || []
-  componentSelectorVisible.value = true
+export default {
+  name: 'ComponentConfig',
+  components: {
+    InfoFilled,
+    ComponentSlot,
+    ComponentSelector,
+  },
+  data() {
+    return {
+      componentSelectorVisible: false,
+      currentSlotName: '',
+      currentAllowedComponents: [],
+    }
+  },
+  computed: {
+    ...mapStores(useEditorStore),
+  },
+  methods: {
+    openComponentSelector(slotName, allowedComponents) {
+      this.currentSlotName = slotName
+      this.currentAllowedComponents = allowedComponents || []
+      this.componentSelectorVisible = true
+    },
+    handleSelectComponent(component) {
+      this.editorStore.addComponent(this.currentSlotName, component)
+      this.componentSelectorVisible = false
+    },
+  },
+  provide() {
+    return {
+      openComponentSelector: this.openComponentSelector,
+    }
+  },
 }
-
-/**
- * 选择组件
- */
-function handleSelectComponent(component) {
-  editorStore.addComponent(currentSlotName.value, component)
-  componentSelectorVisible.value = false
-}
-
-// 提供给子组件使用
-provide('openComponentSelector', openComponentSelector)
 </script>
