@@ -39,7 +39,8 @@
             <span class="font-semibold">代码生成成功</span>
           </div>
           <div class="flex gap-2">
-            <el-button icon="el-icon-view" @click="showPreviewDialog = true"> 预览 </el-button>
+            <el-button icon="el-icon-view" @click="showLivePreview = true"> 在线预览 </el-button>
+            <el-button icon="el-icon-document" @click="showPreviewDialog = true"> 查看代码 </el-button>
             <el-button icon="el-icon-document-copy" @click="handleCopyCode"> 复制代码 </el-button>
             <el-button icon="el-icon-download" @click="handleDownloadCode"> 下载文件 </el-button>
             <el-button icon="el-icon-refresh" type="warning" @click="handleRegenerate">
@@ -135,6 +136,7 @@
     </el-card>
 
     <CodePreviewDialog v-model="showPreviewDialog" :code="generatedCode" />
+    <LivePreviewDialog v-model="showLivePreview" :code="generatedCode" />
 
     <el-card shadow="never" class="mt-6">
       <template #header>
@@ -163,17 +165,20 @@ import { Message } from 'element-ui'
 import { mapActions, mapState } from 'vuex'
 import { generateCode } from '../services/codeGenerator'
 import CodePreviewDialog from './CodePreviewDialog.vue'
+import LivePreviewDialog from './LivePreviewDialog.vue'
 
 export default {
   name: 'CodeGenerator',
   components: {
     CodePreviewDialog,
+    LivePreviewDialog,
   },
   emits: ['request-ai-config'],
   data() {
     return {
       generating: false,
       showPreviewDialog: false,
+      showLivePreview: false,
       generationStatus: [],
       generationResult: null,
     }
