@@ -7,34 +7,32 @@
 
     <!-- API 列表 -->
     <div class="mb-6 space-y-4">
-      <el-button type="primary" :icon="Plus" @click="handleAddApi"> 添加 API 接口想· </el-button>
+      <el-button type="primary" icon="el-icon-plus" @click="handleAddApi">
+        添加 API 接口
+      </el-button>
 
-      <div v-if="editorStore.apiConfigs.length === 0" class="text-center py-12">
+      <div v-if="apiConfigs.length === 0" class="text-center py-12">
         <el-empty description="还没有配置 API，请点击上方按钮添加" />
       </div>
 
       <!-- API 卡片列表 -->
       <el-collapse v-model="activeApis" class="space-y-4">
-        <el-collapse-item
-          v-for="(api, index) in editorStore.apiConfigs"
-          :key="api.id"
-          :name="api.id"
-        >
+        <el-collapse-item v-for="(api, index) in apiConfigs" :key="api.id" :name="api.id">
           <template #title>
             <div class="flex items-center justify-between w-full pr-4">
               <div class="flex items-center gap-2">
-                <el-icon class="text-primary"><Document /></el-icon>
+                <i class="el-icon-document text-primary"></i>
                 <span class="font-semibold">
                   {{ api.name || `API ${index + 1}` }}
                 </span>
-                <el-tag v-if="api.url" size="small" type="success">
+                <el-tag v-if="api.url" size="small" type="success" class="max-w-xs truncate">
                   {{ api.method }} {{ api.url }}
                 </el-tag>
               </div>
               <el-button
                 type="danger"
                 size="small"
-                :icon="Delete"
+                icon="el-icon-delete"
                 circle
                 @click.stop="handleRemoveApi(api.id)"
               />
@@ -116,41 +114,37 @@
 </template>
 
 <script>
-import { ElMessage } from 'element-plus'
-import { Plus, Delete, Document } from '@element-plus/icons-vue'
-import { mapStores } from 'pinia'
-import { useEditorStore } from '../stores/editorStore'
+import { Message } from 'element-ui'
+import { mapActions, mapState } from 'vuex'
 
 export default {
   name: 'ApiConfig',
   data() {
     return {
       activeApis: [],
-      Plus,
-      Delete,
-      Document,
     }
   },
   computed: {
-    ...mapStores(useEditorStore),
+    ...mapState('editor', ['apiConfigs']),
   },
   methods: {
+    ...mapActions('editor', ['addApiConfig', 'removeApiConfig', 'updateApiConfig']),
     handleAddApi() {
-      this.editorStore.addApiConfig()
-      const lastApi = this.editorStore.apiConfigs[this.editorStore.apiConfigs.length - 1]
+      this.addApiConfig()
+      const lastApi = this.apiConfigs[this.apiConfigs.length - 1]
       if (lastApi) {
         this.activeApis.push(lastApi.id)
       }
     },
     handleRemoveApi(apiId) {
-      this.editorStore.removeApiConfig(apiId)
-      ElMessage.success('已删除 API 配置')
+      this.removeApiConfig(apiId)
+      Message.success('已删除 API 配置')
     },
     updateApi(apiId, updates) {
-      this.editorStore.updateApiConfig(apiId, updates)
+      this.updateApiConfig({ apiId, updates })
     },
     validateJson(apiId, field) {
-      const api = this.editorStore.apiConfigs.find(a => a.id === apiId)
+      const api = this.apiConfigs.find(a => a.id === apiId)
       if (!api) return
 
       const value = api[field]

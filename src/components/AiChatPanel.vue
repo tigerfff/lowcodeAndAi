@@ -8,9 +8,8 @@
       <div class="flex items-center gap-2">
         <el-button
           size="small"
-          text
-          type="primary"
-          :disabled="editorStore.chatMessages.length === 0 || sending"
+          type="text"
+          :disabled="chatMessages.length === 0 || sending"
           @click="handleClear"
         >
           清空对话
@@ -21,36 +20,28 @@
     <el-scrollbar ref="messageScroll" class="flex-1 overflow-hidden px-6 py-6">
       <div class="space-y-6">
         <div
-          v-if="editorStore.chatMessages.length === 0"
+          v-if="chatMessages.length === 0"
           class="flex h-64 flex-col items-center justify-center text-sm text-gray-400"
         >
-          <el-icon :size="48" class="mb-4 text-gray-300">
-            <ChatLineRound />
-          </el-icon>
+          <i class="el-icon-chat-dot-square mb-4" style="font-size: 48px"></i>
           <p class="mb-1">开始输入问题，AI 将帮助你生成代码或分析需求</p>
           <p>例如：“根据当前 API 帮我生成表格列配置”</p>
         </div>
 
         <template v-else>
           <div
-            v-for="(message, index) in editorStore.chatMessages"
-            :key="message.createdAt + index"
+            v-for="(message, index) in chatMessages"
+            :key="message.createdAt + '-' + index"
             :class="['flex w-full', message.role === 'user' ? 'justify-end' : 'justify-start']"
           >
             <div class="max-w-[70%] space-y-2">
               <div
-                v-if="
-                  (message.attachments && message.attachments.length > 0) ||
-                  (message.images && message.images.length > 0)
-                "
-                :class="[
-                  'flex flex-wrap gap-2',
-                  message.role === 'user' ? 'justify-end' : 'justify-start',
-                ]"
+                v-if="message.attachments && message.attachments.length"
+                class="flex flex-wrap gap-2"
               >
                 <div
-                  v-for="file in message.attachments || message.images"
-                  :key="file.uid || file.url || file.dataUrl"
+                  v-for="file in message.attachments"
+                  :key="file.uid || file.dataUrl || file.url"
                   class="attachment-thumb overflow-hidden rounded-lg border border-gray-200"
                 >
                   <img
@@ -61,15 +52,13 @@
                 </div>
               </div>
               <div
-                v-if="message.text || message.content"
+                v-if="message.text"
                 :class="[
-                  'rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm',
-                  message.role === 'user' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800',
+                  'rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap break-words',
+                  message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800',
                 ]"
               >
-                <div class="whitespace-pre-wrap break-words">
-                  {{ message.text || message.content }}
-                </div>
+                {{ message.text }}
               </div>
               <div class="mt-1 text-right text-xs text-gray-400">
                 {{ formatTimestamp(message.createdAt) }}
@@ -94,7 +83,7 @@
           />
         </el-form-item>
         <div
-          v-if="pendingAttachments.length > 0"
+          v-if="pendingAttachments.length"
           class="mb-3 flex flex-wrap gap-2 text-xs text-gray-500"
         >
           <div
@@ -106,20 +95,18 @@
             <el-button
               class="attachment-remove"
               type="danger"
-              size="small"
+              size="mini"
               circle
+              icon="el-icon-close"
               @click="removeAttachment(file.uid)"
-            >
-              ×
-            </el-button>
+            ></el-button>
           </div>
         </div>
         <div class="flex items-center justify-between text-xs text-gray-400">
           <div class="flex items-center gap-3">
             <el-button
-              text
-              type="primary"
-              :icon="Picture"
+              type="text"
+              icon="el-icon-picture"
               :disabled="sending"
               @click="triggerImageSelect"
             >
@@ -140,16 +127,14 @@
                 @keyup.enter="handleModelCommit"
               />
             </el-tooltip>
-            <span class="text-gray-500">当前模型：{{ editorStore.aiConfig.model }}</span>
+            <span class="text-gray-500">当前模型：{{ aiConfig.model }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <el-button text type="primary" @click="emit('request-ai-config')"> 模型设置 </el-button>
+            <el-button type="text" @click="$emit('request-ai-config')">模型设置</el-button>
             <el-button
               type="primary"
               :loading="sending"
-              :disabled="
-                (draftMessage.trim().length === 0 && pendingAttachments.length === 0) || sending
-              "
+              :disabled="(!draftMessage.trim() && pendingAttachments.length === 0) || sending"
               @click="handleSend"
             >
               发送
@@ -170,18 +155,12 @@
 </template>
 
 <script>
-import { ElMessage } from 'element-plus'
-import { ChatLineRound, Picture } from '@element-plus/icons-vue'
-import { mapStores } from 'pinia'
-import { useEditorStore } from '../stores/editorStore'
+import { Message } from 'element-ui'
+import { mapActions, mapState } from 'vuex'
 import { sendChatMessages } from '../services/aiService'
 
 export default {
   name: 'AiChatPanel',
-  components: {
-    ChatLineRound,
-    Picture,
-  },
   emits: ['request-ai-config'],
   data() {
     return {
@@ -189,49 +168,34 @@ export default {
       sending: false,
       pendingAttachments: [],
       modelValue: '',
-      Picture,
     }
   },
   computed: {
-    ...mapStores(useEditorStore),
-    systemPrompt() {
-      const templateLabel = this.editorStore.selectedTemplate?.label || '通用页面'
-      const apiCount = this.editorStore.apiConfigs.length
-      const searchCount = this.editorStore.slots.searchArea.length
-      const actionCount = this.editorStore.slots.actionArea.length
-      const tableCount = this.editorStore.slots.tableColumns.length
-      return `你是一名资深的前端工程师，擅长基于 Vue3 + Element Plus + hui-pro 体系进行页面设计和代码生成。
-
-当前项目背景：
-- 页面模板：${templateLabel}
-- 已配置组件数量：${searchCount + actionCount + tableCount}
-- API 接口数量：${apiCount}
-
-请结合这些信息提供专业、实用的建议或代码示例。必要时可以使用列表、代码块等格式化输出，但要保持回答简洁明确。`
-    },
+    ...mapState('editor', ['chatMessages', 'aiConfig', 'selectedTemplate', 'slots', 'apiConfigs']),
   },
   watch: {
-    'editorStore.chatMessages.length'() {
-      this.$nextTick(() => {
-        this.scrollToBottom()
-      })
+    chatMessages: {
+      handler() {
+        this.$nextTick(() => {
+          const wrap = this.$refs.messageScroll && this.$refs.messageScroll.wrap
+          if (wrap) {
+            wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' })
+          }
+        })
+      },
+      deep: true,
     },
-    'editorStore.aiConfig.model'(newModel) {
-      if (newModel !== this.modelValue) {
-        this.modelValue = newModel || ''
+    'aiConfig.model'(val) {
+      if (!this.sending) {
+        this.modelValue = val || ''
       }
     },
   },
-  mounted() {
-    this.modelValue = this.editorStore.aiConfig.model || ''
+  created() {
+    this.modelValue = this.aiConfig.model || ''
   },
   methods: {
-    scrollToBottom() {
-      const wrap = this.$refs.messageScroll?.wrapRef
-      if (wrap) {
-        wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' })
-      }
-    },
+    ...mapActions('editor', ['appendChatMessage', 'clearChatMessages']),
     formatTimestamp(timestamp) {
       if (!timestamp) return ''
       const date = new Date(timestamp)
@@ -240,103 +204,21 @@ export default {
         .toString()
         .padStart(2, '0')}`
     },
-    async handleSend() {
-      const text = this.draftMessage.trim()
-      if (!text && this.pendingAttachments.length === 0) return
-
-      if (!this.editorStore.aiConfig.baseUrl || !this.editorStore.aiConfig.apiKey) {
-        ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
-        this.$emit('request-ai-config')
-        return
-      }
-
-      const attachmentsSnapshot = this.pendingAttachments.map(file => ({ ...file }))
-
-      const userMessage = {
-        role: 'user',
-        text,
-        attachments: attachmentsSnapshot,
-        createdAt: Date.now(),
-      }
-
-      this.editorStore.appendChatMessage(userMessage)
-      this.draftMessage = ''
-      this.pendingAttachments = []
-      this.sending = true
-
-      try {
-        const messages = [
-          { role: 'system', content: [{ type: 'text', text: this.systemPrompt }] },
-          ...this.editorStore.chatMessages.map(message => this.convertMessageToPayload(message)),
-        ]
-
-        const reply = await sendChatMessages({
-          messages,
-          aiConfig: this.editorStore.aiConfig,
-        })
-
-        let replyText = ''
-        if (Array.isArray(reply)) {
-          replyText = reply
-            .map(item => {
-              if (typeof item === 'string') return item
-              if (item && typeof item === 'object') {
-                return item.text || item.content || ''
-              }
-              return ''
-            })
-            .filter(Boolean)
-            .join('\n')
-        } else if (typeof reply === 'string') {
-          replyText = reply
-        } else if (reply && typeof reply === 'object') {
-          try {
-            replyText = JSON.stringify(reply)
-          } catch (error) {
-            console.error('Failed to stringify AI reply:', error)
-            replyText = '[无法解析的响应]'
-          }
-        }
-
-        this.editorStore.appendChatMessage({
-          role: 'assistant',
-          text: replyText,
-          createdAt: Date.now(),
-        })
-      } catch (error) {
-        ElMessage.error(error.message || '对话请求失败，请稍后重试')
-      } finally {
-        this.sending = false
-      }
-    },
     handleClear() {
-      this.editorStore.clearChatMessages()
+      this.clearChatMessages()
       this.pendingAttachments = []
-    },
-    handleModelBlur() {
-      const trimmed = this.modelValue.trim()
-      if (trimmed && trimmed !== this.editorStore.aiConfig.model) {
-        this.editorStore.updateAiConfig({ model: trimmed })
-      } else if (!trimmed && this.editorStore.aiConfig.model) {
-        this.modelValue = this.editorStore.aiConfig.model
-      }
-    },
-    handleModelCommit() {
-      this.handleModelBlur()
     },
     triggerImageSelect() {
-      this.$refs.fileInput?.click()
+      this.$refs.fileInput && this.$refs.fileInput.click()
     },
     handleFileSelect(event) {
       const files = Array.from(event.target.files || [])
-      if (files.length === 0) return
-
+      if (!files.length) return
       files.forEach(file => {
         if (!file.type.startsWith('image/')) {
-          ElMessage.error('仅支持图片格式')
+          Message.error('仅支持图片格式')
           return
         }
-
         const reader = new FileReader()
         reader.onload = () => {
           this.pendingAttachments.push({
@@ -348,11 +230,90 @@ export default {
         }
         reader.readAsDataURL(file)
       })
-
       event.target.value = ''
     },
     removeAttachment(uid) {
       this.pendingAttachments = this.pendingAttachments.filter(file => file.uid !== uid)
+    },
+    handleModelBlur() {
+      const trimmed = (this.modelValue || '').trim()
+      if (trimmed && trimmed !== this.aiConfig.model) {
+        this.$store.dispatch('editor/updateAiConfig', { model: trimmed })
+      } else if (!trimmed && this.aiConfig.model) {
+        this.modelValue = this.aiConfig.model
+      }
+    },
+    handleModelCommit() {
+      this.handleModelBlur()
+    },
+    async handleSend() {
+      const text = this.draftMessage.trim()
+      if (!text && this.pendingAttachments.length === 0) return
+
+      if (!this.aiConfig.baseUrl || !this.aiConfig.apiKey) {
+        Message.error('请先配置 AI 模型（Base URL + API Key）')
+        this.$emit('request-ai-config')
+        return
+      }
+
+      const attachmentsSnapshot = this.pendingAttachments.map(file => ({ ...file }))
+
+      this.appendChatMessage({
+        role: 'user',
+        text,
+        attachments: attachmentsSnapshot,
+        createdAt: Date.now(),
+      })
+
+      this.draftMessage = ''
+      this.pendingAttachments = []
+      this.sending = true
+
+      try {
+        const systemPrompt = `你是一名资深的前端工程师，擅长基于 Vue2 + Element UI 体系进行页面设计和代码生成。当前模板：${
+          this.selectedTemplate?.label || '通用页面'
+        }；组件数量：${
+          (this.slots.searchArea?.length || 0) +
+          (this.slots.actionArea?.length || 0) +
+          (this.slots.tableColumns?.length || 0)
+        }；API 数量：${this.apiConfigs.length}`
+
+        const messages = [
+          {
+            role: 'system',
+            content: [{ type: 'text', text: systemPrompt }],
+          },
+          ...this.chatMessages.map(message => this.convertMessageToPayload(message)),
+        ]
+
+        const reply = await sendChatMessages({
+          messages,
+          aiConfig: { ...this.aiConfig, model: this.modelValue || this.aiConfig.model },
+        })
+
+        let replyText = ''
+        if (Array.isArray(reply)) {
+          replyText = reply
+            .map(item => (typeof item === 'string' ? item : item?.text || item?.content || ''))
+            .filter(Boolean)
+            .join('\n')
+        } else if (typeof reply === 'string') {
+          replyText = reply
+        } else if (reply && typeof reply === 'object') {
+          replyText = JSON.stringify(reply)
+        }
+
+        this.appendChatMessage({
+          role: 'assistant',
+          text: replyText,
+          attachments: [],
+          createdAt: Date.now(),
+        })
+      } catch (error) {
+        Message.error(error.message || '对话请求失败，请稍后重试')
+      } finally {
+        this.sending = false
+      }
     },
     convertMessageToPayload(message) {
       const parts = []
@@ -365,32 +326,16 @@ export default {
             },
           })
         })
-      } else if (message.images && message.images.length > 0) {
-        message.images.forEach(file => {
-          parts.push({
-            type: 'image_url',
-            image_url: {
-              url: file.dataUrl || file.url,
-            },
-          })
-        })
       }
-
-      const textContent = message.text || message.content
-      if (textContent) {
+      if (message.text) {
         parts.push({
           type: 'text',
-          text: textContent,
+          text: message.text,
         })
       }
-
       if (parts.length === 0) {
-        parts.push({
-          type: 'text',
-          text: '',
-        })
+        parts.push({ type: 'text', text: '' })
       }
-
       return {
         role: message.role,
         content: parts,

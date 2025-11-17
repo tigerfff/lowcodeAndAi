@@ -1,28 +1,20 @@
 <template>
-  <el-dialog
-    :model-value="visible"
-    title="选择组件"
-    width="800px"
-    @update:model-value="$emit('update:visible', $event)"
-  >
+  <el-dialog :visible.sync="internalVisible" title="选择组件" width="800px">
     <div class="component-selector">
-      <!-- 搜索框 -->
       <el-input
         v-model="searchKeyword"
         placeholder="搜索组件..."
-        :prefix-icon="Search"
+        prefix-icon="el-icon-search"
         clearable
         class="mb-4"
       />
 
-      <!-- 组件分类 -->
       <el-tabs v-model="activeCategory">
         <el-tab-pane label="全部" name="all" />
         <el-tab-pane label="基础组件" name="base" />
         <el-tab-pane label="业务组件" name="business" />
       </el-tabs>
 
-      <!-- 组件网格 -->
       <div class="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
         <div
           v-for="component in filteredComponents"
@@ -31,9 +23,7 @@
           @click="selectComponent(component)"
         >
           <div class="mb-2 flex items-center gap-2">
-            <el-icon :size="20" class="text-primary">
-              <component :is="getComponentIcon(component.category)" />
-            </el-icon>
+            <i :class="getComponentIcon(component.category)" class="text-primary" style="font-size: 20px;"></i>
             <h4 class="font-semibold text-gray-900">{{ component.label }}</h4>
           </div>
           <p class="mb-2 text-xs text-gray-500">{{ component.name }}</p>
@@ -44,7 +34,6 @@
         </div>
       </div>
 
-      <!-- 空状态 -->
       <el-empty v-if="filteredComponents.length === 0" description="没有找到匹配的组件" />
     </div>
   </el-dialog>
@@ -52,16 +41,9 @@
 
 <script>
 import { getAllComponents } from '../services/componentLibrary'
-import { Search, Edit, Operation, Grid } from '@element-plus/icons-vue'
 
 export default {
   name: 'ComponentSelector',
-  components: {
-    Search,
-    Edit,
-    Operation,
-    Grid,
-  },
   props: {
     visible: {
       type: Boolean,
@@ -79,6 +61,7 @@ export default {
   emits: ['update:visible', 'select'],
   data() {
     return {
+      internalVisible: this.visible,
       searchKeyword: '',
       activeCategory: 'all',
       componentList: [],
@@ -110,6 +93,14 @@ export default {
       return result
     },
   },
+  watch: {
+    visible(val) {
+      this.internalVisible = val
+    },
+    internalVisible(val) {
+      this.$emit('update:visible', val)
+    },
+  },
   mounted() {
     this.loadComponents()
   },
@@ -126,11 +117,11 @@ export default {
     },
     getComponentIcon(category) {
       const icons = {
-        base: Edit,
-        business: Operation,
-        search: Search,
+        base: 'el-icon-edit',
+        business: 'el-icon-s-operation',
+        search: 'el-icon-search',
       }
-      return icons[category] || Grid
+      return icons[category] || 'el-icon-grid'
     },
   },
 }

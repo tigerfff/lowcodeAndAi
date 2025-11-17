@@ -2,62 +2,54 @@
   <div class="code-generator">
     <div class="mb-6">
       <h2 class="text-xl font-bold text-gray-900">生成代码</h2>
-      <p class="mt-1 text-sm text-gray-500">AI 将自动推断配置并生成高质量的 Vue3 代码</p>
+      <p class="mt-1 text-sm text-gray-500">AI 将自动推断配置并生成高质量的 Vue 代码</p>
     </div>
 
-    <!-- 生成状态 -->
-    <el-card v-if="!editorStore.generatedCode && !generating" shadow="never" class="mb-6">
+    <el-card v-if="!generatedCode && !generating" shadow="never" class="mb-6">
       <div class="text-center py-12">
-        <el-icon :size="64" class="text-gray-300 mb-4">
-          <DocumentAdd />
-        </el-icon>
+        <i class="el-icon-document-add text-gray-300 mb-4" style="font-size: 64px"></i>
         <p class="text-gray-500 mb-6">点击下方按钮开始生成代码</p>
-        <el-button type="primary" size="large" :icon="MagicStick" @click="handleGenerate">
+        <el-button type="primary" size="large" icon="el-icon-magic-stick" @click="handleGenerate">
           开始生成
         </el-button>
       </div>
     </el-card>
 
-    <!-- 生成中 -->
     <el-card v-if="generating" shadow="never" class="mb-6">
       <div class="text-center py-12">
-        <el-icon :size="64" class="is-loading text-primary mb-4">
-          <Loading />
-        </el-icon>
+        <i class="el-icon-loading text-blue-500 mb-4" style="font-size: 64px"></i>
         <h3 class="text-lg font-semibold text-gray-900 mb-2">AI 正在生成代码...</h3>
         <div class="space-y-2 text-sm text-gray-600">
           <p v-for="(status, index) in generationStatus" :key="index">
-            <el-icon class="mr-1">
-              <component :is="status.done ? 'CircleCheck' : 'Loading'" />
-            </el-icon>
+            <i
+              :class="[status.done ? 'el-icon-circle-check text-green-500' : 'el-icon-loading']"
+              class="mr-1"
+            ></i>
             {{ status.text }}
           </p>
         </div>
       </div>
     </el-card>
 
-    <!-- 代码预览 -->
-    <el-card v-if="editorStore.generatedCode" shadow="never">
+    <el-card v-if="generatedCode" shadow="never">
       <template #header>
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <el-icon class="text-success"><CircleCheck /></el-icon>
+            <i class="el-icon-circle-check text-green-500"></i>
             <span class="font-semibold">代码生成成功</span>
           </div>
           <div class="flex gap-2">
-            <el-button :icon="View" @click="showPreviewDialog = true"> 预览 </el-button>
-            <el-button :icon="CopyDocument" @click="handleCopyCode"> 复制代码 </el-button>
-            <el-button :icon="Download" @click="handleDownloadCode"> 下载文件 </el-button>
-            <el-button :icon="Refresh" type="warning" @click="handleRegenerate">
+            <el-button icon="el-icon-view" @click="showPreviewDialog = true"> 预览 </el-button>
+            <el-button icon="el-icon-document-copy" @click="handleCopyCode"> 复制代码 </el-button>
+            <el-button icon="el-icon-download" @click="handleDownloadCode"> 下载文件 </el-button>
+            <el-button icon="el-icon-refresh" type="warning" @click="handleRegenerate">
               重新生成
             </el-button>
           </div>
         </div>
       </template>
 
-      <!-- 代码摘要 -->
       <div class="space-y-4">
-        <!-- 生成结果信息 -->
         <el-alert
           v-if="generationResult"
           :type="generationResult.method === 'ai' ? 'success' : 'warning'"
@@ -116,16 +108,14 @@
           </div>
         </div>
 
-        <!-- 代码预览(折叠) -->
         <el-collapse>
           <el-collapse-item v-if="generationResult?.prompt" title="查看 AI 提示词" name="prompt">
             <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
               <span>这是本次 AI 调用使用的完整提示词</span>
               <el-button
                 size="small"
-                type="primary"
-                :icon="CopyDocument"
-                link
+                type="text"
+                icon="el-icon-document-copy"
                 @click="handleCopyPrompt"
               >
                 复制提示词
@@ -138,14 +128,14 @@
           <el-collapse-item title="查看代码" name="code">
             <pre
               class="code-preview rounded-lg bg-gray-900 p-4 text-gray-100 overflow-auto max-h-96"
-            ><code>{{ editorStore.generatedCode }}</code></pre>
+            ><code>{{ generatedCode }}</code></pre>
           </el-collapse-item>
         </el-collapse>
       </div>
     </el-card>
 
-    <!-- 代码预览对话框 -->
-    <CodePreviewDialog v-model:visible="showPreviewDialog" :code="editorStore.generatedCode" />
+    <CodePreviewDialog v-model="showPreviewDialog" :code="generatedCode" />
+
     <el-card shadow="never" class="mt-6">
       <template #header>
         <div class="flex items-center justify-between">
@@ -169,28 +159,14 @@
 </template>
 
 <script>
-import { ElMessage } from 'element-plus'
-import {
-  DocumentAdd,
-  MagicStick,
-  Loading,
-  CircleCheck,
-  View,
-  CopyDocument,
-  Download,
-  Refresh,
-} from '@element-plus/icons-vue'
-import { mapStores } from 'pinia'
-import { useEditorStore } from '../stores/editorStore'
+import { Message } from 'element-ui'
+import { mapActions, mapState } from 'vuex'
 import { generateCode } from '../services/codeGenerator'
 import CodePreviewDialog from './CodePreviewDialog.vue'
 
 export default {
   name: 'CodeGenerator',
   components: {
-    DocumentAdd,
-    Loading,
-    CircleCheck,
     CodePreviewDialog,
   },
   emits: ['request-ai-config'],
@@ -200,45 +176,49 @@ export default {
       showPreviewDialog: false,
       generationStatus: [],
       generationResult: null,
-      MagicStick,
-      View,
-      CopyDocument,
-      Download,
-      Refresh,
     }
   },
   computed: {
-    ...mapStores(useEditorStore),
+    ...mapState('editor', [
+      'generatedCode',
+      'slots',
+      'apiConfigs',
+      'customPrompt',
+      'aiConfig',
+      'pageInfo',
+      'selectedTemplate',
+    ]),
     codeStats() {
-      const code = this.editorStore.generatedCode
+      const code = this.generatedCode
       return {
         lines: code ? code.split('\n').length : 0,
         components:
-          (this.editorStore.slots.searchArea?.length || 0) +
-          (this.editorStore.slots.actionArea?.length || 0) +
-          (this.editorStore.slots.tableColumns?.length || 0),
-        apis: this.editorStore.apiConfigs?.length || 0,
+          (this.slots.searchArea?.length || 0) +
+          (this.slots.actionArea?.length || 0) +
+          (this.slots.tableColumns?.length || 0),
+        apis: this.apiConfigs?.length || 0,
       }
     },
     customPromptText: {
       get() {
-        return this.editorStore.customPrompt
+        return this.customPrompt
       },
       set(val) {
-        this.editorStore.setCustomPrompt(val)
+        this.setCustomPrompt(val)
       },
     },
   },
   methods: {
+    ...mapActions('editor', ['setGeneratedCode', 'setCustomPrompt']),
     async handleGenerate() {
-      if (!this.editorStore.aiConfig.baseUrl || !this.editorStore.aiConfig.apiKey) {
-        ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
+      if (!this.aiConfig.baseUrl || !this.aiConfig.apiKey) {
+        Message.error('请先配置 AI 模型（Base URL + API Key）')
         this.$emit('request-ai-config')
         return
       }
 
-      if (!this.editorStore.selectedTemplate?.id) {
-        ElMessage.error('请先选择页面模板')
+      if (!this.selectedTemplate?.id) {
+        Message.error('请先选择页面模板')
         return
       }
 
@@ -255,14 +235,14 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 300))
 
         const config = {
-          templateId: this.editorStore.selectedTemplate.id,
-          pageName: this.editorStore.pageInfo.pageName,
-          description: this.editorStore.pageInfo.title,
-          pageInfo: this.editorStore.pageInfo,
-          breadcrumb: this.editorStore.pageInfo.breadcrumb,
-          apiConfigs: this.editorStore.apiConfigs,
-          aiConfig: this.editorStore.aiConfig,
-          slots: this.editorStore.slots,
+          templateId: this.selectedTemplate.id,
+          pageName: this.pageInfo.pageName,
+          description: this.pageInfo.title,
+          pageInfo: this.pageInfo,
+          breadcrumb: this.pageInfo.breadcrumb,
+          apiConfigs: this.apiConfigs,
+          aiConfig: this.aiConfig,
+          slots: this.slots,
           customPrompt: this.customPromptText,
           pagination: {
             enabled: true,
@@ -280,12 +260,12 @@ export default {
         this.generationResult = result
 
         if (result.success) {
-          this.editorStore.setGeneratedCode(result.code)
+          this.setGeneratedCode(result.code)
 
           if (result.method === 'ai') {
-            ElMessage.success({ message: '✨ AI 代码生成成功！', duration: 3000 })
+            Message.success({ message: '✨ AI 代码生成成功！', duration: 3000 })
           } else if (result.method === 'template') {
-            ElMessage.warning({ message: '⚠️ 使用模板生成（AI 生成失败）', duration: 3000 })
+            Message.warning({ message: '⚠️ 使用模板生成（AI 生成失败）', duration: 3000 })
           }
 
           if (result.validation && result.validation.issues.length > 0) {
@@ -299,7 +279,7 @@ export default {
         }
       } catch (error) {
         console.error('Code generation failed:', error)
-        ElMessage.error({
+        Message.error({
           message: '❌ 代码生成失败: ' + error.message,
           duration: 5000,
         })
@@ -308,37 +288,37 @@ export default {
       }
     },
     handleRegenerate() {
-      this.editorStore.setGeneratedCode('')
+      this.setGeneratedCode('')
       this.handleGenerate()
     },
     async handleCopyCode() {
       try {
-        await navigator.clipboard.writeText(this.editorStore.generatedCode)
-        ElMessage.success('代码已复制到剪贴板')
+        await navigator.clipboard.writeText(this.generatedCode)
+        Message.success('代码已复制到剪贴板')
       } catch (error) {
         console.error('Copy code failed:', error)
-        ElMessage.error('复制失败')
+        Message.error('复制失败')
       }
     },
     async handleCopyPrompt() {
       if (!this.generationResult?.prompt) return
       try {
         await navigator.clipboard.writeText(this.generationResult.prompt)
-        ElMessage.success('提示词已复制')
+        Message.success('提示词已复制')
       } catch (error) {
         console.error('Copy prompt failed:', error)
-        ElMessage.error('复制失败')
+        Message.error('复制失败')
       }
     },
     handleDownloadCode() {
-      const blob = new Blob([this.editorStore.generatedCode], { type: 'text/plain' })
+      const blob = new Blob([this.generatedCode], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${this.editorStore.pageInfo.pageName || 'Page'}.vue`
+      a.download = `${this.pageInfo.pageName || 'Page'}.vue`
       a.click()
       URL.revokeObjectURL(url)
-      ElMessage.success('代码已下载')
+      Message.success('代码已下载')
     },
   },
 }

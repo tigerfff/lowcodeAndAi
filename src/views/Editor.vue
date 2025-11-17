@@ -3,16 +3,18 @@
     <header class="border-b border-gray-200 bg-white shadow-sm">
       <div class="flex flex-wrap items-center justify-between gap-4 px-8 py-4">
         <div class="flex flex-wrap items-center gap-3">
-          <el-button type="primary" :icon="Document" @click="templateDrawerVisible = true">
+          <el-button type="primary" icon="el-icon-document" @click="templateDrawerVisible = true">
             选择模板
           </el-button>
-          <el-button :icon="Picture" @click="openImageDialog">图片解析</el-button>
+          <el-button icon="el-icon-picture" @click="openImageDialog">图片解析</el-button>
         </div>
         <div class="flex items-center gap-3">
-          <el-button :icon="Download" @click="handleExportConfig">导出配置</el-button>
-          <el-button :icon="Upload" @click="handleImportConfig">导入配置</el-button>
-          <el-button :icon="Setting" @click="openModelDialog">模型设置</el-button>
-          <el-button :icon="RefreshLeft" type="warning" @click="handleReset">重置</el-button>
+          <el-button icon="el-icon-download" @click="handleExportConfig">导出配置</el-button>
+          <el-button icon="el-icon-upload" @click="handleImportConfig">导入配置</el-button>
+          <el-button icon="el-icon-setting" @click="openModelDialog">模型设置</el-button>
+          <el-button icon="el-icon-refresh-left" type="warning" @click="handleReset">
+            重置
+          </el-button>
         </div>
       </div>
     </header>
@@ -59,10 +61,16 @@
 
         <div class="flex-1 overflow-auto px-6 py-6">
           <div class="space-y-3">
-            <el-button style="margin-bottom: 0" block :icon="Setting" type="default" @click="componentDrawerVisible = true">
+            <el-button
+              style="margin-bottom: 0"
+              block
+              icon="el-icon-setting"
+              type="default"
+              @click="componentDrawerVisible = true"
+            >
               组件配置
             </el-button>
-            <el-button block :icon="Connection" type="default" @click="apiDrawerVisible = true">
+            <el-button block icon="el-icon-link" type="default" @click="apiDrawerVisible = true">
               API 配置
             </el-button>
           </div>
@@ -100,13 +108,11 @@
               </div>
 
               <div class="flex items-center gap-2">
-                <el-button text type="primary" @click="componentDrawerVisible = true">
+                <el-button type="text" @click="componentDrawerVisible = true">
                   快速编辑组件
                 </el-button>
-                <el-button text type="primary" @click="apiDrawerVisible = true">
-                  查看 API
-                </el-button>
-                <el-button text type="primary" @click="openModelDialog"> 切换模型 </el-button>
+                <el-button type="text" @click="apiDrawerVisible = true">查看 API</el-button>
+                <el-button type="text" @click="openModelDialog">切换模型</el-button>
               </div>
             </div>
           </div>
@@ -130,34 +136,37 @@
     </div>
 
     <el-drawer
-      v-model="templateDrawerVisible"
+      :visible="templateDrawerVisible"
       size="480px"
       title="选择页面模板"
       :close-on-click-modal="false"
+      @close="templateDrawerVisible = false"
     >
       <TemplateSelector />
     </el-drawer>
 
     <el-drawer
-      v-model="componentDrawerVisible"
+      :visible="componentDrawerVisible"
       size="560px"
       title="组件配置"
       :close-on-click-modal="false"
+      @close="componentDrawerVisible = false"
     >
       <ComponentConfig />
     </el-drawer>
 
     <el-drawer
-      v-model="apiDrawerVisible"
+      :visible="apiDrawerVisible"
       size="520px"
       title="API 配置"
       :close-on-click-modal="false"
+      @close="apiDrawerVisible = false"
     >
       <ApiConfig />
     </el-drawer>
 
     <el-dialog
-      v-model="imageDialogVisible"
+      :visible="imageDialogVisible"
       width="520px"
       title="图片解析"
       :close-on-click-modal="false"
@@ -178,7 +187,7 @@
             :on-change="handleImageChange"
             :on-remove="handleImageRemove"
           >
-            <el-icon><Plus /></el-icon>
+            <i class="el-icon-plus"></i>
           </el-upload>
           <div class="mt-1 text-xs text-gray-500">支持 PNG / JPG / WEBP，建议尺寸不超过 5MB。</div>
         </div>
@@ -231,10 +240,11 @@
     </el-dialog>
 
     <el-dialog
-      v-model="modelDialogVisible"
+      :visible="modelDialogVisible"
       width="460px"
       title="AI 模型设置"
       :close-on-click-modal="false"
+      @close="modelDialogVisible = false"
     >
       <el-form :model="editorStore.aiConfig" label-width="110px" class="space-y-1">
         <el-form-item label="Base URL" required>
@@ -298,7 +308,12 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="importDialogVisible" title="导入配置" width="600px">
+    <el-dialog
+      :visible="importDialogVisible"
+      title="导入配置"
+      width="600px"
+      @close="importDialogVisible = false"
+    >
       <el-input
         v-model="importConfigText"
         type="textarea"
@@ -314,19 +329,8 @@
 </template>
 
 <script>
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Document,
-  Setting,
-  Connection,
-  Download,
-  Upload,
-  RefreshLeft,
-  Picture,
-  Plus,
-} from '@element-plus/icons-vue'
-import { mapStores } from 'pinia'
-import { useEditorStore } from '../stores/editorStore'
+import { Message, MessageBox } from 'element-ui'
+import { mapActions } from 'vuex'
 import TemplateSelector from '../components/TemplateSelector.vue'
 import ComponentConfig from '../components/ComponentConfig.vue'
 import ApiConfig from '../components/ApiConfig.vue'
@@ -342,14 +346,6 @@ export default {
     ApiConfig,
     CodeGenerator,
     AiChatPanel,
-    Document,
-    Setting,
-    Connection,
-    Download,
-    Upload,
-    RefreshLeft,
-    Picture,
-    Plus,
   },
   data() {
     return {
@@ -368,18 +364,12 @@ export default {
       imageModel: '',
       imageLoading: false,
       commonModelOptions: ['qwen3-vl-plus', 'qwen-max', 'gpt-4', 'claude-3-5-sonnet-latest'],
-      documentIcon: Document,
-      settingIcon: Setting,
-      connectionIcon: Connection,
-      downloadIcon: Download,
-      uploadIcon: Upload,
-      refreshLeftIcon: RefreshLeft,
-      pictureIcon: Picture,
-      plusIcon: Plus,
     }
   },
   computed: {
-    ...mapStores(useEditorStore),
+    editorStore() {
+      return this.$store.state.editor
+    },
     totalComponentCount() {
       const searchCount = this.editorStore.slots.searchArea?.length || 0
       const actionCount = this.editorStore.slots.actionArea?.length || 0
@@ -399,21 +389,27 @@ export default {
   },
   created() {
     this.imageModel = this.editorStore.aiConfig.model || ''
-    if (typeof this.editorStore.ensureTemplateSelected === 'function') {
-      this.editorStore.ensureTemplateSelected()
-    }
+    this.ensureTemplateSelectedAction()
   },
   methods: {
+    ...mapActions('editor', {
+      updateAiConfigAction: 'updateAiConfig',
+      exportConfigAction: 'exportConfig',
+      importConfigAction: 'importConfig',
+      resetAction: 'reset',
+      applySuggestionAction: 'applyComponentSuggestion',
+      ensureTemplateSelectedAction: 'ensureTemplateSelected',
+    }),
     openModelDialog() {
       this.modelDialogVisible = true
     },
     handleSaveModelConfig() {
-      this.editorStore.updateAiConfig({ ...this.editorStore.aiConfig })
-      ElMessage.success('AI 模型配置已保存')
+      this.updateAiConfigAction({ ...this.editorStore.aiConfig })
+      Message.success('AI 模型配置已保存')
       this.modelDialogVisible = false
     },
-    handleExportConfig() {
-      const config = this.editorStore.exportConfig()
+    async handleExportConfig() {
+      const config = await this.exportConfigAction()
       const jsonStr = JSON.stringify(config, null, 2)
       const blob = new Blob([jsonStr], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -422,7 +418,7 @@ export default {
       a.download = `page-config-${Date.now()}.json`
       a.click()
       URL.revokeObjectURL(url)
-      ElMessage.success('配置已导出')
+      Message.success('配置已导出')
     },
     handleImportConfig() {
       this.importConfigText = ''
@@ -431,22 +427,22 @@ export default {
     async confirmImportConfig() {
       try {
         const config = JSON.parse(this.importConfigText)
-        await this.editorStore.importConfig(config)
+        await this.importConfigAction(config)
         this.importDialogVisible = false
-        ElMessage.success('配置已导入')
+        Message.success('配置已导入')
       } catch (error) {
-        ElMessage.error('配置格式错误: ' + error.message)
+        Message.error('配置格式错误: ' + error.message)
       }
     },
     handleReset() {
-      ElMessageBox.confirm('确定要重置所有配置吗？', '提示', {
+      MessageBox.confirm('确定要重置所有配置吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
       })
         .then(() => {
-          this.editorStore.reset()
-          ElMessage.success('已重置')
+          this.resetAction()
+          Message.success('已重置')
         })
         .catch(() => {})
     },
@@ -456,6 +452,7 @@ export default {
       this.imageDialogVisible = true
     },
     handleImageDialogClose() {
+      this.imageDialogVisible = false
       if (!this.imageLoading) {
         this.resetImageDialogState()
       }
@@ -480,7 +477,7 @@ export default {
     },
     handleImageBeforeUpload(file) {
       if (!file.type.startsWith('image/')) {
-        ElMessage.error('仅支持上传图片文件')
+        Message.error('仅支持上传图片文件')
         return false
       }
       const reader = new FileReader()
@@ -497,7 +494,7 @@ export default {
           dataUrl = `data:${file.type};base64,${btoa(binary)}`
         }
         if (!dataUrl) {
-          ElMessage.error('图片读取失败，请重试')
+          Message.error('图片读取失败，请重试')
           return
         }
         this.setImageDataUrl(dataUrl, file)
@@ -505,14 +502,14 @@ export default {
       reader.readAsDataURL(file)
       return false
     },
-    handleImageChange(uploadFile) {
-      const rawFile = uploadFile?.raw
+    handleImageChange(file) {
+      const rawFile = file?.raw
       if (!rawFile) return
       const reader = new FileReader()
       reader.onload = () => {
         const dataUrl = typeof reader.result === 'string' ? reader.result : ''
         if (!dataUrl) {
-          ElMessage.error('图片读取失败，请重试')
+          Message.error('图片读取失败，请重试')
           return
         }
         this.setImageDataUrl(dataUrl, rawFile)
@@ -541,17 +538,17 @@ export default {
     },
     async handleAnalyzeImage() {
       if (!this.imageBase64) {
-        ElMessage.error('请先上传页面截图')
+        Message.error('请先上传页面截图')
         return
       }
       if (!this.editorStore.aiConfig.baseUrl || !this.editorStore.aiConfig.apiKey) {
-        ElMessage.error('请先配置 AI 模型（Base URL + API Key）')
+        Message.error('请先配置 AI 模型（Base URL + API Key）')
         this.openModelDialog()
         return
       }
       const chosenModel = (this.imageModel || this.editorStore.aiConfig.model || '').trim()
       if (!chosenModel) {
-        ElMessage.error('请指定用于解析图片的模型')
+        Message.error('请指定用于解析图片的模型')
         return
       }
 
@@ -651,13 +648,13 @@ export default {
           aiConfig: { ...this.editorStore.aiConfig, model: chosenModel },
         })
         const suggestion = this.extractJsonFromResponse(reply)
-        this.editorStore.applyComponentSuggestion(suggestion)
-        ElMessage.success('已根据图片生成组件配置，请到组件配置中查看并调整')
+        this.applySuggestionAction(suggestion)
+        Message.success('已根据图片生成组件配置，请到组件配置中查看并调整')
         this.imageDialogVisible = false
         this.resetImageDialogState()
       } catch (error) {
         console.error('Image analysis failed:', error)
-        ElMessage.error(error.message || '图片解析失败，请稍后重试')
+        Message.error(error.message || '图片解析失败，请稍后重试')
       } finally {
         this.imageLoading = false
       }

@@ -2,31 +2,27 @@
   <div class="component-config">
     <div class="mb-6">
       <h2 class="text-xl font-bold text-gray-900">配置页面组件</h2>
-      <p class="mt-1 text-sm text-gray-500">选择需要的组件并配置基本信息,AI 将自动推断其他属性</p>
+      <p class="mt-1 text-sm text-gray-500">选择需要的组件并配置基本信息，AI 将自动推断其他属性</p>
     </div>
 
-    <!-- 页面基本信息 -->
     <el-card class="mb-6" shadow="never">
       <template #header>
         <div class="flex items-center gap-2">
-          <el-icon><InfoFilled /></el-icon>
+          <i class="el-icon-info"></i>
           <span class="font-semibold">页面基本信息</span>
         </div>
       </template>
 
-      <el-form :model="editorStore.pageInfo" label-width="100px">
+      <el-form label-width="100px">
         <el-form-item label="页面名称" required>
-          <el-input
-            v-model="editorStore.pageInfo.pageName"
-            placeholder="如: UserList (用于生成组件名)"
-          />
+          <el-input v-model="pageName" placeholder="如: UserList (用于生成组件名)" />
         </el-form-item>
         <el-form-item label="页面标题">
-          <el-input v-model="editorStore.pageInfo.title" placeholder="如: 用户列表" />
+          <el-input v-model="pageTitle" placeholder="如: 用户列表" />
         </el-form-item>
         <el-form-item label="面包屑">
           <el-select
-            v-model="editorStore.pageInfo.breadcrumb"
+            v-model="pageBreadcrumb"
             multiple
             filterable
             allow-create
@@ -37,39 +33,34 @@
       </el-form>
     </el-card>
 
-    <!-- 组件配置区域 -->
     <div class="space-y-6">
-      <!-- 搜索区 -->
       <ComponentSlot
-        v-if="editorStore.selectedTemplate?.slots?.searchArea"
+        v-if="selectedTemplate?.slots?.searchArea"
         slot-name="searchArea"
         title="搜索区组件"
-        icon="Search"
-        :max-count="editorStore.selectedTemplate.slots.searchArea.maxCount"
-        :allowed-components="editorStore.selectedTemplate.slots.searchArea.allowedComponents"
+        icon="el-icon-search"
+        :max-count="selectedTemplate.slots.searchArea.maxCount"
+        :allowed-components="selectedTemplate.slots.searchArea.allowedComponents"
       />
 
-      <!-- 操作区 -->
       <ComponentSlot
-        v-if="editorStore.selectedTemplate?.slots?.actionArea"
+        v-if="selectedTemplate?.slots?.actionArea"
         slot-name="actionArea"
         title="操作区按钮"
-        icon="Operation"
-        :max-count="editorStore.selectedTemplate.slots.actionArea.maxCount"
-        :allowed-components="editorStore.selectedTemplate.slots.actionArea.allowedComponents"
+        icon="el-icon-s-operation"
+        :max-count="selectedTemplate.slots.actionArea.maxCount"
+        :allowed-components="selectedTemplate.slots.actionArea.allowedComponents"
       />
 
-      <!-- 表格列 -->
       <ComponentSlot
-        v-if="editorStore.selectedTemplate?.slots?.tableColumns"
+        v-if="selectedTemplate?.slots?.tableColumns"
         slot-name="tableColumns"
         title="表格列配置"
-        icon="Grid"
-        :allowed-components="editorStore.selectedTemplate.slots.tableColumns.allowedComponents"
+        icon="el-icon-grid"
+        :allowed-components="selectedTemplate.slots.tableColumns.allowedComponents"
       />
     </div>
 
-    <!-- 组件选择器对话框 -->
     <ComponentSelector
       v-model:visible="componentSelectorVisible"
       :slot-name="currentSlotName"
@@ -80,16 +71,13 @@
 </template>
 
 <script>
-import { mapStores } from 'pinia'
-import { InfoFilled } from '@element-plus/icons-vue'
-import { useEditorStore } from '../stores/editorStore'
+import { mapState, mapActions } from 'vuex'
 import ComponentSlot from './ComponentSlot.vue'
 import ComponentSelector from './ComponentSelector.vue'
 
 export default {
   name: 'ComponentConfig',
   components: {
-    InfoFilled,
     ComponentSlot,
     ComponentSelector,
   },
@@ -101,16 +89,41 @@ export default {
     }
   },
   computed: {
-    ...mapStores(useEditorStore),
+    ...mapState('editor', ['selectedTemplate', 'pageInfo']),
+    pageName: {
+      get() {
+        return this.pageInfo.pageName
+      },
+      set(val) {
+        this.updatePageInfo({ pageName: val })
+      },
+    },
+    pageTitle: {
+      get() {
+        return this.pageInfo.title
+      },
+      set(val) {
+        this.updatePageInfo({ title: val })
+      },
+    },
+    pageBreadcrumb: {
+      get() {
+        return this.pageInfo.breadcrumb
+      },
+      set(val) {
+        this.updatePageInfo({ breadcrumb: val })
+      },
+    },
   },
   methods: {
+    ...mapActions('editor', ['updatePageInfo', 'addComponent']),
     openComponentSelector(slotName, allowedComponents) {
       this.currentSlotName = slotName
       this.currentAllowedComponents = allowedComponents || []
       this.componentSelectorVisible = true
     },
     handleSelectComponent(component) {
-      this.editorStore.addComponent(this.currentSlotName, component)
+      this.addComponent({ slotName: this.currentSlotName, component })
       this.componentSelectorVisible = false
     },
   },

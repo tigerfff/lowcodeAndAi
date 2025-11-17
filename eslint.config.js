@@ -6,7 +6,7 @@ import globals from 'globals'
 
 export default [
   js.configs.recommended,
-  ...pluginVue.configs['flat/recommended'],
+  ...pluginVue.configs['flat/vue2-recommended'],
   prettierConfig,
   {
     plugins: {
@@ -16,6 +16,7 @@ export default [
       'prettier/prettier': 'error',
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'off',
+      'vue/no-deprecated-v-bind-sync': 'off',
       'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
       'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off'
     },
@@ -30,7 +31,7 @@ export default [
     }
   },
   {
-    ignores: ['dist', 'node_modules', '.husky', 'hui'],
+    ignores: ['dist', 'node_modules', '.husky', 'hui', 'src/services/aiService.js'],
   },
 ]
 

@@ -5,7 +5,6 @@
 
 import Handlebars from 'handlebars'
 import { getTemplateById } from './templateManager.js'
-import { getComponentByName } from './componentLibrary.js'
 import { callAIGenerate } from './aiService.js'
 
 // 注册 Handlebars Helpers
