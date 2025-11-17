@@ -11,11 +11,15 @@
         <div class="code-panel" :style="{ width: splitPosition + '%' }">
           <div class="panel-header">
             <div class="flex items-center gap-2">
-              <i class="el-icon-document"></i>
-              <span class="font-semibold">代码</span>
+              <i class="el-icon-edit"></i>
+              <span class="font-semibold">代码编辑</span>
               <el-tag size="small" type="info">{{ lineCount }} 行</el-tag>
+              <el-tag v-if="isModified" size="small" type="warning">已修改</el-tag>
             </div>
             <div class="flex gap-2">
+              <el-button icon="el-icon-refresh-left" size="small" @click="handleReset">
+                重置
+              </el-button>
               <el-button icon="el-icon-document-copy" size="small" @click="handleCopy">
                 复制
               </el-button>
@@ -25,7 +29,12 @@
             </div>
           </div>
           <div class="code-content">
-            <pre class="code-preview"><code>{{ code }}</code></pre>
+            <textarea
+              v-model="editableCode"
+              class="code-editor"
+              spellcheck="false"
+              @input="handleCodeChange"
+            ></textarea>
           </div>
         </div>
         <div class="split-divider" @mousedown="startResize"></div>
@@ -99,17 +108,23 @@ export default {
       error: null,
       previewHTML: '',
       isResizing: false,
+      editableCode: '', // 可编辑的代码
     }
   },
   computed: {
     lineCount() {
-      return this.code ? this.code.split('\n').length : 0
+      return this.editableCode ? this.editableCode.split('\n').length : 0
+    },
+    isModified() {
+      return this.editableCode !== this.code
     },
   },
   watch: {
     visible(val) {
       this.internalVisible = val
       if (val && this.code) {
+        // 初始化可编辑代码
+        this.editableCode = this.code
         this.$nextTick(() => {
           this.compileAndPreview()
         })
@@ -118,8 +133,12 @@ export default {
     internalVisible(val) {
       this.$emit('update:visible', val)
     },
-    code() {
-      if (this.internalVisible && this.code) {
+    code(newCode) {
+      // 当外部代码更新时，如果没有本地修改，同步更新
+      if (!this.isModified) {
+        this.editableCode = newCode
+      }
+      if (this.internalVisible && newCode) {
         this.debouncedCompile()
       }
     },
@@ -165,8 +184,18 @@ export default {
     stopResize() {
       this.isResizing = false
     },
+    handleCodeChange() {
+      // 代码改变时触发防抖编译
+      this.debouncedCompile()
+    },
+    handleReset() {
+      // 重置为原始代码
+      this.editableCode = this.code
+      this.compileAndPreview()
+      Message.success('代码已重置')
+    },
     async compileAndPreview() {
-      if (!this.code || !this.code.trim()) {
+      if (!this.editableCode || !this.editableCode.trim()) {
         return
       }
 
@@ -182,10 +211,10 @@ export default {
         }
 
         console.log('开始编译，baseUrl:', baseUrl)
-        console.log('代码长度:', this.code.length)
+        console.log('代码长度:', this.editableCode.length)
 
         // 编译并构建预览 HTML
-        const compiled = compileVueSFC(this.code)
+        const compiled = compileVueSFC(this.editableCode)
         console.log('编译结果:', compiled)
         if (!compiled.success) {
           throw new Error(compiled.error || '编译失败')
@@ -193,7 +222,7 @@ export default {
         console.log('生成的完整脚本:')
         console.log(compiled.script)
 
-        const html = await buildPreviewHTML(this.code, { baseUrl })
+        const html = await buildPreviewHTML(this.editableCode, { baseUrl })
 
         console.log('HTML 生成成功，长度:', html.length)
         this.previewHTML = html
@@ -231,14 +260,14 @@ export default {
     },
     async handleCopy() {
       try {
-        await navigator.clipboard.writeText(this.code)
+        await navigator.clipboard.writeText(this.editableCode)
         Message.success('代码已复制到剪贴板')
       } catch {
         Message.error('复制失败')
       }
     },
     handleDownload() {
-      const blob = new Blob([this.code], { type: 'text/plain' })
+      const blob = new Blob([this.editableCode], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -318,7 +347,9 @@ export default {
   position: relative;
 }
 
-.code-preview {
+.code-editor {
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 16px;
   background: #1e1e1e;
@@ -326,8 +357,31 @@ export default {
   font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  overflow: auto;
-  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  tab-size: 2;
+}
+
+.code-editor::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.code-editor::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.code-editor::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+.code-editor::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
 }
 
 .preview-frame {

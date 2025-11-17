@@ -282,9 +282,6 @@ export async function buildPreviewHTML(vueCode, options = {}) {
   <!-- Vue 2 -->
   <script src="${vueCDN}"></script>
   
-  <!-- Element UI -->
-  <script src="${elementUIJS}"></script>
-  
   <!-- hui2.43.2 -->
   <script src="${baseUrl}hui2.43.2/lib/hui.umd.min.js"></script>
   
