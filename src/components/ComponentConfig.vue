@@ -1,5 +1,5 @@
 <template>
-  <div class="component-config">
+  <div class="component-config" style="padding: 8px">
     <div class="mb-6">
       <h2 class="text-xl font-bold text-gray-900">配置页面组件</h2>
       <p class="mt-1 text-sm text-gray-500">选择需要的组件并配置基本信息，AI 将自动推断其他属性</p>
@@ -62,11 +62,14 @@
     </div>
 
     <ComponentSelector
-      v-model:visible="componentSelectorVisible"
+      :visible.sync="componentSelectorVisible"
       :slot-name="currentSlotName"
       :allowed-components="currentAllowedComponents"
       @select="handleSelectComponent"
+      @add-custom-component="handleAddCustomComponent"
     />
+
+    <AddCustomComponentDialog :visible.sync="addCustomComponentDialogVisible" />
   </div>
 </template>
 
@@ -74,18 +77,21 @@
 import { mapState, mapActions } from 'vuex'
 import ComponentSlot from './ComponentSlot.vue'
 import ComponentSelector from './ComponentSelector.vue'
+import AddCustomComponentDialog from './AddCustomComponentDialog.vue'
 
 export default {
   name: 'ComponentConfig',
   components: {
     ComponentSlot,
     ComponentSelector,
+    AddCustomComponentDialog,
   },
   data() {
     return {
       componentSelectorVisible: false,
       currentSlotName: '',
       currentAllowedComponents: [],
+      addCustomComponentDialogVisible: false,
     }
   },
   computed: {
@@ -125,6 +131,9 @@ export default {
     handleSelectComponent(component) {
       this.addComponent({ slotName: this.currentSlotName, component })
       this.componentSelectorVisible = false
+    },
+    handleAddCustomComponent() {
+      this.addCustomComponentDialogVisible = true
     },
   },
   provide() {

@@ -3,15 +3,122 @@
  * 负责加载、管理 hui 和 Element UI 组件元数据
  */
 
+// 缓存加载的组件数据
+let cachedComponents = null
+
+/**
+ * 清除组件缓存，强制重新加载
+ */
+export function clearComponentCache() {
+  cachedComponents = null
+}
+
+/**
+ * 从 JSON 文件加载组件清单
+ * @returns {Promise<Array>} 组件列表
+ */
+async function loadComponentsFromJson() {
+  try {
+    const response = await fetch('/manifests/hui-components.json')
+    const data = await response.json()
+    return data.components || []
+  } catch (error) {
+    console.error('Failed to load hui-components.json:', error)
+    return []
+  }
+}
+
+/**
+ * 将 JSON 格式的组件转换为应用需要的格式
+ * @param {Object} jsonComponent - JSON 格式的组件
+ * @returns {Object} 转换后的组件
+ */
+function transformComponent(jsonComponent) {
+  // 确定组件的展示分类
+  let displayCategory = jsonComponent.category
+  if (jsonComponent.category === 'form') {
+    displayCategory = 'base'
+  } else if (jsonComponent.category === 'layout') {
+    displayCategory = 'business'
+  } else if (jsonComponent.category === 'data' || jsonComponent.category === 'navigation') {
+    displayCategory = 'base'
+  }
+
+  return {
+    name: jsonComponent.name,
+    label: jsonComponent.description.split('，')[0].replace(/组件$/, ''),
+    description: jsonComponent.description,
+    category: displayCategory,
+    icon: getCategoryIcon(jsonComponent.category),
+    defaultProps: jsonComponent.commonProps || {},
+    requiredProps: jsonComponent.requiredProps || [],
+    props: Object.keys(jsonComponent.commonProps || {}).map(key => ({
+      name: key,
+      label: key,
+      type: inferPropType(jsonComponent.commonProps[key]),
+      default: jsonComponent.commonProps[key],
+    })),
+    events: jsonComponent.events || [],
+    slots: jsonComponent.slots || {},
+    methods: jsonComponent.methods || [],
+    vModel: jsonComponent.vModel,
+    specialNote: jsonComponent.specialNote,
+    usageConstraints: jsonComponent.usageConstraints || [],
+    dependencies: jsonComponent.dependencies || [],
+  }
+}
+
+/**
+ * 根据分类获取图标
+ * @param {string} category - 分类
+ * @returns {string} 图标类名
+ */
+function getCategoryIcon(category) {
+  const icons = {
+    form: 'el-icon-edit',
+    layout: 'el-icon-menu',
+    data: 'el-icon-s-grid',
+    navigation: 'el-icon-s-operation',
+    feedback: 'el-icon-bell',
+    basic: 'el-icon-star-off',
+    others: 'el-icon-more',
+  }
+  return icons[category] || 'el-icon-document'
+}
+
+/**
+ * 推断属性类型
+ * @param {*} value - 属性值
+ * @returns {string} 类型
+ */
+function inferPropType(value) {
+  if (value === null || value === undefined) return 'string'
+  if (typeof value === 'boolean') return 'boolean'
+  if (typeof value === 'number') return 'number'
+  if (Array.isArray(value)) return 'array'
+  if (typeof value === 'object') return 'object'
+  return 'string'
+}
+
 /**
  * 获取所有可用组件
- * @returns {Promise<Object>} 按分类组织的组件列表
+ * @returns {Promise<Array>} 组件列表
  */
 export async function getAllComponents() {
   try {
-    // 从 manifests 目录加载组件清单
-    // 目前使用硬编码数据，后续可以从 hui-components.json 加载
-    const components = {
+    // 如果已缓存，直接返回
+    if (cachedComponents) {
+      return cachedComponents
+    }
+
+    // 从 JSON 文件加载组件
+    const jsonComponents = await loadComponentsFromJson()
+    
+    // 转换为应用格式
+    const transformedComponents = jsonComponents.map(transformComponent)
+    
+    // 添加一些旧的硬编码组件以保持兼容性
+    const legacyComponents = {
       search: [
         {
           name: 'el-input',
@@ -422,10 +529,27 @@ export async function getAllComponents() {
       ],
     }
 
-    // 将对象转换为扁平数组
-    const allComponents = [...components.search, ...components.table, ...components.action]
-
-    return allComponents
+    // 合并所有组件（优先使用从 JSON 加载的组件）
+    const allComponents = [...transformedComponents, ...legacyComponents.search, ...legacyComponents.table, ...legacyComponents.action]
+    
+    // 去重（JSON 中的组件优先）
+    const uniqueComponents = []
+    const seenNames = new Set()
+    
+    for (const comp of allComponents) {
+      if (!seenNames.has(comp.name)) {
+        uniqueComponents.push(comp)
+        seenNames.add(comp.name)
+      }
+    }
+    
+    // 缓存结果
+    cachedComponents = uniqueComponents
+    
+    console.log('✅ 加载组件:', uniqueComponents.length, '个')
+    console.log('📦 组件列表:', uniqueComponents.map(c => c.name).slice(0, 20).join(', '), '...')
+    
+    return uniqueComponents
   } catch (error) {
     console.error('Failed to load components:', error)
     return []

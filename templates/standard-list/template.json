@@ -16,22 +16,44 @@
       "description": "位于页面顶部的搜索条件区域，可添加 0~8 个搜索组件。",
       "maxCount": 8,
       "allowedComponents": [
+        "el-input-number",
+        "el-select",
+        "el-date-picker",
+        "el-time-picker",
+        "el-time-select",
+        "el-cascader",
+        "el-autocomplete",
+        "el-radio",
+        "el-radio-group",
+        "el-checkbox",
+        "el-checkbox-group",
+        "el-switch",
+        "el-slider",
+        "el-upload",
+        "el-color-picker",
+        "el-rate",
         "el-input",
         "el-select",
         "el-date-picker",
         "el-cascader",
         "el-autocomplete",
+        "el-input-number",
         "area-selector",
         "team-selector",
         "user-selector"
       ],
-      "wrapper": "h-page-search-item"
+      "wrapper": "el-page-search-item"
     },
     "actionArea": {
       "label": "操作区",
       "description": "搜索区下方的操作按钮区域，可添加 0~6 个操作组件。",
       "maxCount": 6,
       "allowedComponents": [
+        "el-button",
+        "el-button-group",
+        "el-dropdown",
+        "el-dropdown-menu",
+        "el-dropdown-item",
         "el-button",
         "el-dropdown",
         "action-group",
@@ -50,20 +72,20 @@
   "previewLayout": {
     "description": "预览时的动态布局配置",
     "root": {
-      "component": "h-page-container",
-      "class": "h-page-container",
+      "component": "el-page-container",
+      "class": "el-page-container",
       "children": [
         {
-          "component": "h-page-header",
-          "class": "h-page-header",
+          "component": "el-page-header",
+          "class": "el-page-header",
           "renderType": "header"
         },
         {
-          "component": "h-page-content",
-          "class": "h-page-content",
+          "component": "el-page-content",
+          "class": "el-page-content",
           "children": [
             {
-              "component": "h-page-search",
+              "component": "el-page-search",
               "class": "drop-zone",
               "dropZone": "search",
               "props": {
@@ -76,7 +98,7 @@
               "emptyText": "可在此添加搜索组件"
             },
             {
-              "component": "h-page-action",
+              "component": "el-page-action",
               "class": "drop-zone",
               "dropZone": "action",
               "slots": {
@@ -85,7 +107,7 @@
               "emptyText": "可在此添加操作按钮"
             },
             {
-              "component": "h-page-table",
+              "component": "el-page-table",
               "class": "drop-zone",
               "dropZone": "table",
               "props": {
@@ -130,10 +152,10 @@
     "为低置信度推断项提供提示与确认"
       ],
   "componentDefaults": {
-    "h-page-search": {
+    "el-page-search": {
       "label-position": "top"
     },
-    "h-page-table": {
+    "el-page-table": {
       "fixedHeight": true
     },
     "el-table": {

@@ -173,7 +173,6 @@ export default {
     CodePreviewDialog,
     LivePreviewDialog,
   },
-  emits: ['request-ai-config'],
   data() {
     return {
       generating: false,
@@ -187,11 +186,13 @@ export default {
     ...mapState('editor', [
       'generatedCode',
       'slots',
+      'slotPrompts',
       'apiConfigs',
       'customPrompt',
       'aiConfig',
       'pageInfo',
       'selectedTemplate',
+      'customComponents',
     ]),
     codeStats() {
       const code = this.generatedCode
@@ -248,6 +249,8 @@ export default {
           apiConfigs: this.apiConfigs,
           aiConfig: this.aiConfig,
           slots: this.slots,
+          slotPrompts: this.slotPrompts,
+          customComponents: this.customComponents,
           customPrompt: this.customPromptText,
           pagination: {
             enabled: true,

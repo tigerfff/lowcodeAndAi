@@ -60,14 +60,14 @@
         </div>
 
         <div class="flex-1 overflow-auto px-6 py-6">
-          <div class="space-y-3">
+          <div class="flex">
             <el-button
               style="margin-bottom: 0"
               block
               icon="el-icon-setting"
               type="default"
               @click="componentDrawerVisible = true"
-            >
+            > 
               组件配置
             </el-button>
             <el-button block icon="el-icon-link" type="default" @click="apiDrawerVisible = true">
@@ -170,6 +170,7 @@
       width="520px"
       title="图片解析"
       :close-on-click-modal="false"
+      :append-to-body="true"
       @close="handleImageDialogClose"
     >
       <div class="space-y-4">
@@ -244,6 +245,7 @@
       width="460px"
       title="AI 模型设置"
       :close-on-click-modal="false"
+      :append-to-body="true"
       @close="modelDialogVisible = false"
     >
       <el-form :model="editorStore.aiConfig" label-width="110px" class="space-y-1">

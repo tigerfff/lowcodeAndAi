@@ -18,6 +18,12 @@ const defaultState = () => ({
     actionArea: [],
     tableColumns: [],
   },
+  slotPrompts: {
+    searchArea: '',
+    actionArea: '',
+    tableColumns: '',
+  },
+  customComponents: [],
   apiConfigs: [],
   aiConfig: {
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
@@ -32,6 +38,60 @@ const defaultState = () => ({
   loading: false,
 })
 
+/**
+ * 生成组件友好名称
+ * @param {string} slotName - Slot名称
+ * @param {string} componentName - 组件名
+ * @param {string} label - 标签
+ * @param {string} model - 数据模型字段
+ * @param {number} index - 索引
+ * @returns {string} 友好名称
+ */
+function generateFriendlyName(slotName, componentName, label, model, index) {
+  // 如果有label，优先使用
+  if (label) {
+    return label
+  }
+  
+  // 如果有model，使用model + 组件类型
+  if (model) {
+    const componentTypeMap = {
+      'el-input': '输入框',
+      'h-input': '输入框',
+      'el-select': '选择器',
+      'h-select': '选择器',
+      'el-date-picker': '日期选择器',
+      'h-date-picker': '日期选择器',
+      'el-button': '按钮',
+      'h-button': '按钮',
+      'el-switch': '开关',
+      'h-switch': '开关',
+      'el-table-column': '列',
+      'h-table-column': '列',
+    }
+    const typeName = componentTypeMap[componentName] || '组件'
+    return `${model}${typeName}`
+  }
+  
+  // 默认：组件类型 + 序号
+  const componentTypeMap = {
+    'el-input': '输入框',
+    'h-input': '输入框',
+    'el-select': '选择器',
+    'h-select': '选择器',
+    'el-date-picker': '日期选择器',
+    'h-date-picker': '日期选择器',
+    'el-button': '按钮',
+    'h-button': '按钮',
+    'el-switch': '开关',
+    'h-switch': '开关',
+    'el-table-column': '列',
+    'h-table-column': '列',
+  }
+  const typeName = componentTypeMap[componentName] || '组件'
+  return `${typeName}${index + 1}`
+}
+
 function normalizeComponent(slotName, item, index) {
   if (!item || typeof item !== 'object') return null
   const defaultComponentMap = {
@@ -43,8 +103,19 @@ function normalizeComponent(slotName, item, index) {
   const id =
     item.id ||
     `${slotName}_${componentName}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`
+  
+  // 生成友好名称
+  const friendlyName = item.friendlyName || generateFriendlyName(
+    slotName,
+    componentName,
+    item.label || item.text || item.title,
+    item.model,
+    index
+  )
+  
   const normalized = {
     id,
+    friendlyName,
     component: componentName,
     label: item.label || item.text || item.title || '',
     model: item.model || '',
@@ -124,6 +195,40 @@ const editorModule = {
     },
     SET_SLOTS(state, slots) {
       state.slots = slots
+    },
+    SET_SLOT_PROMPT(state, { slotName, prompt }) {
+      Vue.set(state.slotPrompts, slotName, prompt)
+    },
+    LOAD_CUSTOM_COMPONENTS(state) {
+      const stored = localStorage.getItem('ai-code-custom-components')
+      if (stored) {
+        try {
+          const data = JSON.parse(stored)
+          state.customComponents = data.components || []
+        } catch (error) {
+          console.error('Failed to load custom components:', error)
+          state.customComponents = []
+        }
+      }
+    },
+    SAVE_CUSTOM_COMPONENTS(state) {
+      localStorage.setItem('ai-code-custom-components', JSON.stringify({
+        version: '1.0',
+        components: state.customComponents,
+        timestamp: new Date().toISOString(),
+      }))
+    },
+    ADD_CUSTOM_COMPONENT(state, component) {
+      state.customComponents.push(component)
+    },
+    UPDATE_CUSTOM_COMPONENT(state, { id, updates }) {
+      const index = state.customComponents.findIndex(c => c.id === id)
+      if (index !== -1) {
+        Vue.set(state.customComponents, index, { ...state.customComponents[index], ...updates })
+      }
+    },
+    DELETE_CUSTOM_COMPONENT(state, id) {
+      state.customComponents = state.customComponents.filter(c => c.id !== id)
     },
     ADD_SLOT_COMPONENT(state, { slotName, component }) {
       if (!state.slots[slotName]) {
@@ -241,6 +346,31 @@ const editorModule = {
     },
     removeComponent({ commit }, payload) {
       commit('REMOVE_SLOT_COMPONENT', payload)
+    },
+    updateSlotPrompt({ commit }, { slotName, prompt }) {
+      commit('SET_SLOT_PROMPT', { slotName, prompt })
+    },
+    loadCustomComponents({ commit }) {
+      commit('LOAD_CUSTOM_COMPONENTS')
+    },
+    addCustomComponent({ commit }, component) {
+      const newComponent = {
+        ...component,
+        id: component.id || `custom_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      commit('ADD_CUSTOM_COMPONENT', newComponent)
+      commit('SAVE_CUSTOM_COMPONENTS')
+      return newComponent
+    },
+    updateCustomComponent({ commit }, payload) {
+      commit('UPDATE_CUSTOM_COMPONENT', payload)
+      commit('SAVE_CUSTOM_COMPONENTS')
+    },
+    deleteCustomComponent({ commit }, id) {
+      commit('DELETE_CUSTOM_COMPONENT', id)
+      commit('SAVE_CUSTOM_COMPONENTS')
     },
     updateComponent({ commit }, payload) {
       commit('UPDATE_SLOT_COMPONENT', payload)
@@ -463,6 +593,7 @@ const store = new Vuex.Store({
 
 store.dispatch('editor/loadAiConfig')
 store.dispatch('editor/loadTemplatePreference')
+store.dispatch('editor/loadCustomComponents')
 store.dispatch('editor/ensureTemplateSelected')
 
 export default store

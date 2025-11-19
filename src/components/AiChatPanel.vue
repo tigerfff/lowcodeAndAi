@@ -161,7 +161,6 @@ import { sendChatMessages } from '../services/aiService'
 
 export default {
   name: 'AiChatPanel',
-  emits: ['request-ai-config'],
   data() {
     return {
       draftMessage: '',

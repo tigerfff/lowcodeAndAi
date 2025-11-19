@@ -4,6 +4,7 @@
     title="在线预览"
     width="95%"
     top="2vh"
+    :append-to-body="true"
     class="live-preview-dialog"
   >
     <div class="live-preview-container">
@@ -99,7 +100,6 @@ export default {
       default: 'Page.vue',
     },
   },
-  emits: ['update:visible'],
   data() {
     return {
       internalVisible: this.visible,

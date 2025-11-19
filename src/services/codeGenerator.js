@@ -292,35 +292,131 @@ ${templateSource}
   if (config.slots) {
     prompt += `\n## 四、组件配置\n\n`
 
+    // 构建组件映射表（用于解析提示词中的@mention）
+    const componentMaps = {}
+    
     if (config.slots.searchArea && config.slots.searchArea.length > 0) {
       prompt += `### 搜索区组件 (${config.slots.searchArea.length}个)\n\n`
+      const searchMap = {}
       config.slots.searchArea.forEach((comp, index) => {
-        prompt += `${index + 1}. ${comp.component}`
+        const friendlyName = comp.friendlyName || comp.label || `组件${index + 1}`
+        prompt += `${index + 1}. ${friendlyName} (${comp.component})`
+        prompt += ` - ID: ${comp.id}`
         if (comp.label) prompt += ` - 标签: ${comp.label}`
         if (comp.model) prompt += ` - 字段: ${comp.model}`
+        if (comp.props && Object.keys(comp.props).length > 0) {
+          prompt += ` - 属性: ${JSON.stringify(comp.props)}`
+        }
         prompt += '\n'
+        
+        // 构建映射表
+        searchMap[friendlyName] = {
+          id: comp.id,
+          component: comp.component,
+          model: comp.model,
+          label: comp.label,
+          props: comp.props,
+        }
       })
+      componentMaps.searchArea = searchMap
       prompt += '\n'
+      
+      // 添加搜索区提示词
+      if (config.slotPrompts && config.slotPrompts.searchArea) {
+        prompt += `**搜索区提示词:**\n${config.slotPrompts.searchArea}\n\n`
+        prompt += `**提示词中的组件引用映射:**\n`
+        Object.keys(searchMap).forEach(name => {
+          const comp = searchMap[name]
+          const shortId = comp.id ? comp.id.split('_').slice(-1)[0] : ''
+          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id}, model: ${comp.model || '无'})\n`
+        })
+        prompt += '\n'
+      }
     }
 
     if (config.slots.actionArea && config.slots.actionArea.length > 0) {
       prompt += `### 操作区组件 (${config.slots.actionArea.length}个)\n\n`
+      const actionMap = {}
       config.slots.actionArea.forEach((comp, index) => {
-        prompt += `${index + 1}. ${comp.component}`
-        if (comp.label) prompt += ` - 文字: ${comp.label}`
+        const friendlyName = comp.friendlyName || comp.label || comp.text || `按钮${index + 1}`
+        prompt += `${index + 1}. ${friendlyName} (${comp.component})`
+        prompt += ` - ID: ${comp.id}`
+        if (comp.label || comp.text) prompt += ` - 文字: ${comp.label || comp.text}`
+        if (comp.props && Object.keys(comp.props).length > 0) {
+          prompt += ` - 属性: ${JSON.stringify(comp.props)}`
+        }
         prompt += '\n'
+        
+        // 构建映射表
+        actionMap[friendlyName] = {
+          id: comp.id,
+          component: comp.component,
+          text: comp.text || comp.label,
+          props: comp.props,
+        }
       })
+      componentMaps.actionArea = actionMap
       prompt += '\n'
+      
+      // 添加操作区提示词
+      if (config.slotPrompts && config.slotPrompts.actionArea) {
+        prompt += `**操作区提示词:**\n${config.slotPrompts.actionArea}\n\n`
+        prompt += `**提示词中的组件引用映射:**\n`
+        Object.keys(actionMap).forEach(name => {
+          const comp = actionMap[name]
+          const shortId = comp.id ? comp.id.split('_').slice(-1)[0] : ''
+          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id})\n`
+        })
+        prompt += '\n'
+      }
     }
 
     if (config.slots.tableColumns && config.slots.tableColumns.length > 0) {
       prompt += `### 表格列 (${config.slots.tableColumns.length}个)\n\n`
+      const columnMap = {}
       config.slots.tableColumns.forEach((col, index) => {
-        prompt += `${index + 1}. ${col.props?.label || '列' + (index + 1)}`
+        const friendlyName = col.friendlyName || col.props?.label || `列${index + 1}`
+        prompt += `${index + 1}. ${friendlyName} (${col.component})`
+        prompt += ` - ID: ${col.id}`
+        if (col.props?.label) prompt += ` - 标签: ${col.props.label}`
         if (col.props?.prop) prompt += ` - 字段: ${col.props.prop}`
+        if (col.props && Object.keys(col.props).length > 0) {
+          prompt += ` - 属性: ${JSON.stringify(col.props)}`
+        }
         prompt += '\n'
+        
+        // 构建映射表
+        columnMap[friendlyName] = {
+          id: col.id,
+          component: col.component,
+          prop: col.props?.prop,
+          label: col.props?.label,
+          props: col.props,
+        }
       })
+      componentMaps.tableColumns = columnMap
       prompt += '\n'
+      
+      // 添加表格列提示词
+      if (config.slotPrompts && config.slotPrompts.tableColumns) {
+        prompt += `**表格列提示词:**\n${config.slotPrompts.tableColumns}\n\n`
+        prompt += `**提示词中的组件引用映射:**\n`
+        Object.keys(columnMap).forEach(name => {
+          const comp = columnMap[name]
+          const shortId = comp.id ? comp.id.split('_').slice(-1)[0] : ''
+          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id}, prop: ${comp.prop || '无'})\n`
+        })
+        prompt += '\n'
+      }
+    }
+    
+    // 添加组件联动说明
+    if (config.slotPrompts && Object.values(config.slotPrompts).some(p => p && p.trim())) {
+      prompt += `\n### 组件联动规则说明\n\n`
+      prompt += `在提示词中使用 @组件名 来引用组件。AI需要根据提示词中的描述，生成相应的条件渲染逻辑（v-if/v-show）。\n\n`
+      prompt += `例如：\n`
+      prompt += `- 提示词："当 @部门选择器 选择'总部'时，显示 @子部门选择器"\n`
+      prompt += `- 生成代码：<el-select v-if="filters.department === '总部'" ... />\n\n`
     }
   }
 
@@ -341,6 +437,47 @@ ${templateSource}
       }
       prompt += '\n'
     })
+  }
+
+  // 添加自定义组件信息
+  if (config.customComponents && config.customComponents.length > 0) {
+    prompt += `\n## 五.二、自定义组件\n\n`
+    prompt += `以下是用户定义的自定义组件，在生成代码时需要使用这些组件：\n\n`
+    
+    config.customComponents.forEach((customComp, index) => {
+      prompt += `### ${index + 1}. ${customComp.label || customComp.name}\n\n`
+      prompt += `- 组件名: ${customComp.name}\n`
+      prompt += `- 导入路径: ${customComp.importPath || `@/components/${customComp.name}.vue`}\n`
+      if (customComp.description) {
+        prompt += `- 描述: ${customComp.description}\n`
+      }
+      
+      if (customComp.props && customComp.props.length > 0) {
+        prompt += `- Props:\n`
+        customComp.props.forEach(prop => {
+          let propDesc = `  - ${prop.name}`
+          if (prop.type) propDesc += ` (${prop.type})`
+          if (prop.required) propDesc += ` [必填]`
+          if (prop.default !== undefined) propDesc += ` 默认值: ${prop.default}`
+          prompt += propDesc + '\n'
+        })
+      }
+      
+      if (customComp.events && customComp.events.length > 0) {
+        prompt += `- Events: ${customComp.events.join(', ')}\n`
+      }
+      
+      if (customComp.code) {
+        prompt += `\n**组件源码:**\n\`\`\`vue\n${customComp.code}\n\`\`\`\n`
+      }
+      
+      prompt += '\n'
+    })
+    
+    prompt += `**注意事项:**\n`
+    prompt += `- 使用自定义组件时，需要在 <script> 中导入并注册\n`
+    prompt += `- 导入示例: import CustomComponent from '@/components/CustomComponent.vue'\n`
+    prompt += `- 注册示例: components: { CustomComponent }\n\n`
   }
 
   prompt += `\n## 六、生成要求

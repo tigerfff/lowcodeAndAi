@@ -1,5 +1,11 @@
 <template>
-  <el-dialog :visible.sync="internalVisible" title="代码预览" width="90%" top="5vh">
+  <el-dialog 
+    :visible.sync="internalVisible" 
+    title="代码预览" 
+    width="90%" 
+    top="5vh"
+    :append-to-body="true"
+  >
     <div class="code-preview-dialog">
       <div class="mb-4 flex items-center justify-between rounded-lg bg-gray-100 p-3">
         <div class="flex items-center gap-3">
@@ -46,7 +52,6 @@ export default {
       default: 'Page.vue',
     },
   },
-  emits: ['update:visible'],
   data() {
     return {
       internalVisible: this.visible,
