@@ -62,7 +62,7 @@
     </div>
 
     <ComponentSelector
-      v-model:visible="componentSelectorVisible"
+      :visible.sync="componentSelectorVisible"
       :slot-name="currentSlotName"
       :allowed-components="currentAllowedComponents"
       @select="handleSelectComponent"

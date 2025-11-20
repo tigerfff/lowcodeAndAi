@@ -1,5 +1,11 @@
 <template>
-  <el-dialog :visible.sync="internalVisible" title="选择组件" width="800px">
+  <el-dialog
+    :visible.sync="internalVisible"
+    title="选择组件"
+    width="800px"
+    append-to-body
+    :modal-append-to-body="true"
+  >
     <div class="component-selector">
       <el-input
         v-model="searchKeyword"
