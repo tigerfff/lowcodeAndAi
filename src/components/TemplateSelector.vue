@@ -12,40 +12,31 @@
       <span class="text-gray-500">加载模板中...</span>
     </div>
 
-    <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div v-else class="space-y-3">
       <div
         v-for="template in templates"
         :key="template.id"
-        class="group min-w-0 cursor-pointer rounded-lg border-2 p-4 transition-all duration-200"
+        class="group cursor-pointer rounded-lg border-2 p-3 transition-all duration-200 flex items-center gap-4"
         :class="cardClass(template)"
         @click="handleSelect(template)"
       >
-        <div class="mb-3 flex items-start justify-between">
-          <div class="flex items-center gap-2">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white"
-            >
-              <i class="el-icon-document" style="font-size: 20px"></i>
-            </div>
-            <div class="min-w-0">
-              <h3 class="text-base font-semibold text-gray-900 truncate">
-                {{ template.label }}
-              </h3>
-              <p class="text-xs text-gray-400">v{{ template.version }}</p>
-            </div>
-          </div>
-          <i
-            v-if="selectedTemplate?.id === template.id"
-            class="el-icon-circle-check text-blue-500"
-            style="font-size: 18px"
-          ></i>
+        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+          <i class="el-icon-document" style="font-size: 20px"></i>
         </div>
 
-        <p class="mb-3 min-w-0 break-words text-xs text-gray-500 line-clamp-2">
-          {{ template.description }}
-        </p>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="text-base font-semibold text-gray-900 truncate">
+              {{ template.label }}
+            </h3>
+            <span class="text-xs text-gray-400">v{{ template.version }}</span>
+          </div>
+          <p class="text-xs text-gray-500 truncate">
+            {{ template.description }}
+          </p>
+        </div>
 
-        <div class="flex flex-wrap gap-1.5">
+        <div class="flex items-center gap-1.5 flex-shrink-0">
           <el-tag v-if="template.slots?.searchArea" size="mini" type="info">搜索</el-tag>
           <el-tag v-if="template.slots?.actionArea" size="mini" type="warning">操作</el-tag>
           <el-tag v-if="template.slots?.tableColumns" size="mini" type="success">表格</el-tag>
@@ -53,6 +44,12 @@
             +{{ slotCount(template) - 3 }}
           </el-tag>
         </div>
+
+        <i
+          v-if="selectedTemplate?.id === template.id"
+          class="el-icon-circle-check text-blue-500 flex-shrink-0"
+          style="font-size: 20px"
+        ></i>
       </div>
     </div>
 
@@ -101,6 +98,10 @@ export default {
         ? 'border-primary bg-blue-50 shadow-md'
         : 'border-gray-200 hover:border-primary hover:shadow-md'
     },
+    slotCount(template) {
+      return Object.keys(template.slots || {}).length
+    },
   },
 }
 </script>
+
