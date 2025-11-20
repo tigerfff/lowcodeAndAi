@@ -12,70 +12,45 @@
       <span class="text-gray-500">加载模板中...</span>
     </div>
 
-    <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div
         v-for="template in templates"
         :key="template.id"
-        class="group min-w-0 cursor-pointer rounded-lg border-2 p-6 transition-all duration-200"
+        class="group min-w-0 cursor-pointer rounded-lg border-2 p-4 transition-all duration-200"
         :class="cardClass(template)"
         @click="handleSelect(template)"
       >
-        <div class="mb-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
+        <div class="mb-3 flex items-start justify-between">
+          <div class="flex items-center gap-2">
             <div
-              class="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white"
+              class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white"
             >
-              <i class="el-icon-document" style="font-size: 24px"></i>
+              <i class="el-icon-document" style="font-size: 20px"></i>
             </div>
             <div class="min-w-0">
-              <h3 class="text-lg font-semibold text-gray-900 truncate">
+              <h3 class="text-base font-semibold text-gray-900 truncate">
                 {{ template.label }}
               </h3>
-              <p class="text-xs text-gray-500">v{{ template.version }}</p>
+              <p class="text-xs text-gray-400">v{{ template.version }}</p>
             </div>
           </div>
           <i
             v-if="selectedTemplate?.id === template.id"
             class="el-icon-circle-check text-blue-500"
-            style="font-size: 20px"
+            style="font-size: 18px"
           ></i>
         </div>
 
-        <p class="mb-4 min-w-0 break-words text-sm text-gray-600">
+        <p class="mb-3 min-w-0 break-words text-xs text-gray-500 line-clamp-2">
           {{ template.description }}
         </p>
 
-        <div class="mb-4 space-y-2">
-          <div v-if="template.slots?.searchArea" class="flex items-center gap-2 text-xs">
-            <el-tag size="small" type="info">搜索区</el-tag>
-            <span class="text-gray-500">
-              最多 {{ template.slots.searchArea.maxCount || '-' }} 个组件
-            </span>
-          </div>
-          <div v-if="template.slots?.actionArea" class="flex items-center gap-2 text-xs">
-            <el-tag size="small" type="warning">操作区</el-tag>
-            <span class="text-gray-500">
-              最多 {{ template.slots.actionArea.maxCount || '-' }} 个按钮
-            </span>
-          </div>
-          <div v-if="template.slots?.tableColumns" class="flex items-center gap-2 text-xs">
-            <el-tag size="small" type="success">表格列</el-tag>
-            <span class="text-gray-500">动态配置</span>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <el-tag
-            v-for="task in template.aiTasks?.slice(0, 2)"
-            :key="task"
-            size="small"
-            effect="plain"
-            class="text-xs"
-          >
-            {{ task }}
-          </el-tag>
-          <el-tag v-if="template.aiTasks?.length > 2" size="small" effect="plain">
-            +{{ template.aiTasks.length - 2 }}
+        <div class="flex flex-wrap gap-1.5">
+          <el-tag v-if="template.slots?.searchArea" size="mini" type="info">搜索</el-tag>
+          <el-tag v-if="template.slots?.actionArea" size="mini" type="warning">操作</el-tag>
+          <el-tag v-if="template.slots?.tableColumns" size="mini" type="success">表格</el-tag>
+          <el-tag v-if="slotCount(template) > 3" size="mini" effect="plain">
+            +{{ slotCount(template) - 3 }}
           </el-tag>
         </div>
       </div>
