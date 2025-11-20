@@ -18,17 +18,14 @@
       <!-- 步骤1：粘贴代码 -->
       <div v-show="currentStep === 0" class="step-content">
         <div class="mb-3">
-          <el-alert
-            title="请粘贴完整的 Vue 单文件组件代码"
-            type="info"
-            :closable="false"
-            show-icon
-          >
+          <el-alert title="请粘贴完整的 Vue 单文件组件代码" type="info" :closable="false" show-icon>
             <template slot="default">
               <p>示例格式：</p>
-              <pre class="example-code">&lt;template&gt;...&lt;/template&gt;
+              <pre class="example-code">
+&lt;template&gt;...&lt;/template&gt;
 &lt;script&gt;...&lt;/script&gt;
-&lt;style&gt;...&lt;/style&gt;</pre>
+&lt;style&gt;...&lt;/style&gt;</pre
+              >
             </template>
           </el-alert>
         </div>
@@ -131,7 +128,9 @@
       <div v-show="currentStep === 2" class="step-content">
         <el-result icon="success" title="组件添加成功">
           <template slot="subTitle">
-            <p>已成功添加自定义组件 <strong>{{ componentInfo.label }}</strong></p>
+            <p>
+              已成功添加自定义组件 <strong>{{ componentInfo.label }}</strong>
+            </p>
             <p class="text-gray-500">你现在可以在组件选择器中使用它了</p>
           </template>
         </el-result>
@@ -347,4 +346,3 @@ export default {
   margin-bottom: 8px;
 }
 </style>
-

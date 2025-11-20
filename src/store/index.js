@@ -52,7 +52,7 @@ function generateFriendlyName(slotName, componentName, label, model, index) {
   if (label) {
     return label
   }
-  
+
   // 如果有model，使用model + 组件类型
   if (model) {
     const componentTypeMap = {
@@ -72,7 +72,7 @@ function generateFriendlyName(slotName, componentName, label, model, index) {
     const typeName = componentTypeMap[componentName] || '组件'
     return `${model}${typeName}`
   }
-  
+
   // 默认：组件类型 + 序号
   const componentTypeMap = {
     'el-input': '输入框',
@@ -103,16 +103,18 @@ function normalizeComponent(slotName, item, index) {
   const id =
     item.id ||
     `${slotName}_${componentName}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`
-  
+
   // 生成友好名称
-  const friendlyName = item.friendlyName || generateFriendlyName(
-    slotName,
-    componentName,
-    item.label || item.text || item.title,
-    item.model,
-    index
-  )
-  
+  const friendlyName =
+    item.friendlyName ||
+    generateFriendlyName(
+      slotName,
+      componentName,
+      item.label || item.text || item.title,
+      item.model,
+      index
+    )
+
   const normalized = {
     id,
     friendlyName,
@@ -134,9 +136,7 @@ function normalizeComponent(slotName, item, index) {
 
 function normalizeSlotComponents(slotName, list) {
   if (!Array.isArray(list)) return []
-  return list
-    .map((item, index) => normalizeComponent(slotName, item, index))
-    .filter(Boolean)
+  return list.map((item, index) => normalizeComponent(slotName, item, index)).filter(Boolean)
 }
 
 const editorModule = {
@@ -150,11 +150,7 @@ const editorModule = {
         case 2:
           return state.pageInfo.pageName.length > 0
         case 3:
-          return (
-            state.apiConfigs.length > 0 &&
-            state.aiConfig.baseUrl &&
-            state.aiConfig.apiKey
-          )
+          return state.apiConfigs.length > 0 && state.aiConfig.baseUrl && state.aiConfig.apiKey
         case 4:
           return state.generatedCode.length > 0
         default:
@@ -212,11 +208,14 @@ const editorModule = {
       }
     },
     SAVE_CUSTOM_COMPONENTS(state) {
-      localStorage.setItem('ai-code-custom-components', JSON.stringify({
-        version: '1.0',
-        components: state.customComponents,
-        timestamp: new Date().toISOString(),
-      }))
+      localStorage.setItem(
+        'ai-code-custom-components',
+        JSON.stringify({
+          version: '1.0',
+          components: state.customComponents,
+          timestamp: new Date().toISOString(),
+        })
+      )
     },
     ADD_CUSTOM_COMPONENT(state, component) {
       state.customComponents.push(component)
@@ -379,17 +378,16 @@ const editorModule = {
       commit('REORDER_SLOT_COMPONENTS', payload)
     },
     addApiConfig({ state, commit }, api) {
-      const newApi =
-        api || {
-          id: `api_${Date.now()}`,
-          name: '',
-          url: '',
-          method: 'POST',
-          requestExample: '',
-          responseExample: '',
-          description: '',
-          order: state.apiConfigs.length + 1,
-        }
+      const newApi = api || {
+        id: `api_${Date.now()}`,
+        name: '',
+        url: '',
+        method: 'POST',
+        requestExample: '',
+        responseExample: '',
+        description: '',
+        order: state.apiConfigs.length + 1,
+      }
       commit('ADD_API_CONFIG', newApi)
     },
     removeApiConfig({ commit }, apiId) {
@@ -434,8 +432,7 @@ const editorModule = {
         if (!Array.isArray(templateList) || templateList.length === 0) return
         const savedId = state.selectedTemplateId
         const target =
-          (savedId && templateList.find(template => template.id === savedId)) ||
-          templateList[0]
+          (savedId && templateList.find(template => template.id === savedId)) || templateList[0]
         if (target) {
           dispatch('selectTemplate', target)
         }
@@ -533,14 +530,14 @@ const editorModule = {
               typeof api.requestExample === 'string'
                 ? api.requestExample
                 : api.requestExample
-                ? JSON.stringify(api.requestExample, null, 2)
-                : ''
+                  ? JSON.stringify(api.requestExample, null, 2)
+                  : ''
             const responseExample =
               typeof api.responseExample === 'string'
                 ? api.responseExample
                 : api.responseExample
-                ? JSON.stringify(api.responseExample, null, 2)
-                : ''
+                  ? JSON.stringify(api.responseExample, null, 2)
+                  : ''
             return {
               id: api.id || `api_${Date.now()}_${index}`,
               name: api.name || api.title || `API ${index + 1}`,
@@ -559,10 +556,7 @@ const editorModule = {
       if (!payload || typeof payload !== 'object') return
       const source = payload.slots || payload
       const nextSlots = {
-        searchArea: normalizeSlotComponents(
-          'searchArea',
-          source.searchArea || source.search || []
-        ),
+        searchArea: normalizeSlotComponents('searchArea', source.searchArea || source.search || []),
         actionArea: normalizeSlotComponents(
           'actionArea',
           source.actionArea || source.actions || []
@@ -597,4 +591,3 @@ store.dispatch('editor/loadCustomComponents')
 store.dispatch('editor/ensureTemplateSelected')
 
 export default store
-

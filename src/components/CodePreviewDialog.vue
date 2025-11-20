@@ -1,8 +1,8 @@
 <template>
-  <el-dialog 
-    :visible.sync="internalVisible" 
-    title="代码预览" 
-    width="90%" 
+  <el-dialog
+    :visible.sync="internalVisible"
+    title="代码预览"
+    width="90%"
     top="5vh"
     :append-to-body="true"
   >
@@ -14,7 +14,9 @@
           <el-tag type="success">{{ fileSizeFormatted }}</el-tag>
         </div>
         <div class="flex gap-2">
-          <el-button icon="el-icon-document-copy" size="small" @click="handleCopy"> 复制 </el-button>
+          <el-button icon="el-icon-document-copy" size="small" @click="handleCopy">
+            复制
+          </el-button>
           <el-button icon="el-icon-download" size="small" @click="handleDownload"> 下载 </el-button>
         </div>
       </div>

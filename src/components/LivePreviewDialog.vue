@@ -53,21 +53,25 @@
             </div>
           </div>
           <div class="preview-content">
-            <div v-if="compiling" class="preview-loading">
+            <!-- Loading 遮罩层 -->
+            <div v-if="compiling" class="preview-loading-overlay">
               <i class="el-icon-loading"></i>
               <p>正在编译代码...</p>
             </div>
-            <div v-else-if="error" class="preview-error">
+            <!-- 错误遮罩层 -->
+            <div v-if="error" class="preview-error-overlay">
               <i class="el-icon-warning"></i>
               <h3>编译错误</h3>
               <pre>{{ error }}</pre>
             </div>
+            <!-- iframe 始终存在 -->
             <iframe
-              v-else
               ref="previewFrame"
+              src="/preview-env/index.html"
               class="preview-frame"
               frameborder="0"
-              sandbox="allow-scripts allow-same-origin allow-forms"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+              @load="handleIframeLoad"
             ></iframe>
           </div>
         </div>
@@ -78,7 +82,7 @@
 
 <script>
 import { Message } from 'element-ui'
-import { buildPreviewHTML, compileVueSFC } from '../utils/vueSFCCompiler'
+import { mapState } from 'vuex'
 
 export default {
   name: 'LivePreviewDialog',
@@ -106,12 +110,15 @@ export default {
       splitPosition: 50,
       compiling: false,
       error: null,
-      previewHTML: '',
       isResizing: false,
       editableCode: '', // 可编辑的代码
+      previewReady: false, // 预览环境是否就绪
+      readyTimeout: null, // 就绪超时定时器
+      maxReadyWaitTime: 15000, // 最大等待时间（15秒）
     }
   },
   computed: {
+    ...mapState('editor', ['customComponents']),
     lineCount() {
       return this.editableCode ? this.editableCode.split('\n').length : 0
     },
@@ -123,45 +130,68 @@ export default {
     visible(val) {
       this.internalVisible = val
       if (val && this.code) {
+        console.log('👁️ 预览对话框打开')
+        console.log('代码长度:', this.code.length)
         // 初始化可编辑代码
         this.editableCode = this.code
+        this.error = null
+        this.compiling = true
+        // 设置超时保护
+        this.startReadyTimeout()
+        // 等待 iframe 加载并就绪后再发送代码
         this.$nextTick(() => {
-          this.compileAndPreview()
+          console.log('$nextTick 执行')
+          console.log('previewFrame ref:', this.$refs.previewFrame)
+          this.waitForPreviewReady()
         })
       }
     },
     internalVisible(val) {
       this.$emit('update:visible', val)
+      if (!val) {
+        // 关闭时清理
+        console.log('🚪 预览对话框关闭')
+        this.previewReady = false
+        this.clearReadyTimeout()
+      }
     },
     code(newCode) {
       // 当外部代码更新时，如果没有本地修改，同步更新
       if (!this.isModified) {
         this.editableCode = newCode
       }
-      if (this.internalVisible && newCode) {
-        this.debouncedCompile()
-      }
     },
   },
   created() {
-    // 防抖编译
+    // 防抖发送代码
     let timer = null
-    this.debouncedCompile = () => {
+    this.debouncedSendCode = () => {
       clearTimeout(timer)
       timer = setTimeout(() => {
-        this.compileAndPreview()
+        this.sendCodeToPreview()
       }, 500)
     }
+
+    // 监听来自预览环境的消息
+    window.addEventListener('message', this.handlePreviewMessage)
   },
   mounted() {
+    console.log('🎬 LivePreviewDialog mounted')
     // 绑定全局事件监听器
     document.addEventListener('mousemove', this.handleResize)
     document.addEventListener('mouseup', this.stopResize)
   },
   beforeDestroy() {
+    console.log('💀 LivePreviewDialog beforeDestroy')
+    // 清理消息监听
+    window.removeEventListener('message', this.handlePreviewMessage)
     // 清理事件监听器
     document.removeEventListener('mousemove', this.handleResize)
     document.removeEventListener('mouseup', this.stopResize)
+    // 清理超时计时器
+    if (this.readyTimeout) {
+      clearTimeout(this.readyTimeout)
+    }
   },
   methods: {
     startResize(e) {
@@ -185,78 +215,207 @@ export default {
       this.isResizing = false
     },
     handleCodeChange() {
-      // 代码改变时触发防抖编译
-      this.debouncedCompile()
+      // 代码改变时触发防抖发送
+      if (this.previewReady) {
+        this.debouncedSendCode()
+      }
     },
     handleReset() {
       // 重置为原始代码
       this.editableCode = this.code
-      this.compileAndPreview()
+      this.sendCodeToPreview()
       Message.success('代码已重置')
     },
-    async compileAndPreview() {
+    handleRefresh() {
+      // 重新发送代码
+      this.sendCodeToPreview()
+    },
+    /**
+     * iframe 加载完成
+     */
+    handleIframeLoad() {
+      console.log('✅ iframe DOM 加载完成')
+      console.log('iframe src:', this.$refs.previewFrame?.src)
+      console.log('iframe contentWindow:', this.$refs.previewFrame?.contentWindow)
+
+      // 尝试访问 iframe 内部
+      try {
+        const iframeDoc =
+          this.$refs.previewFrame?.contentDocument ||
+          this.$refs.previewFrame?.contentWindow?.document
+        console.log('iframe document:', iframeDoc)
+        console.log('iframe document.readyState:', iframeDoc?.readyState)
+        console.log('iframe document.title:', iframeDoc?.title)
+      } catch (e) {
+        console.error('❌ 无法访问 iframe 内部（可能是跨域）:', e)
+      }
+
+      // iframe 加载完成后，等待预览环境发送 PREVIEW_READY 消息
+      // 如果已经有代码，等待就绪后发送
+      if (this.editableCode) {
+        this.waitForPreviewReady()
+      }
+    },
+    /**
+     * 开始超时计时
+     */
+    startReadyTimeout() {
+      this.clearReadyTimeout()
+      console.log(`⏱️ 开始等待预览环境就绪（最多 ${this.maxReadyWaitTime / 1000} 秒）`)
+      this.readyTimeout = setTimeout(() => {
+        if (!this.previewReady) {
+          console.error('❌ 预览环境初始化超时')
+          this.error = '预览环境加载超时，请检查网络连接或刷新页面重试'
+          this.compiling = false
+          Message.error('预览环境加载超时')
+        }
+      }, this.maxReadyWaitTime)
+    },
+    /**
+     * 清除超时计时
+     */
+    clearReadyTimeout() {
+      if (this.readyTimeout) {
+        clearTimeout(this.readyTimeout)
+        this.readyTimeout = null
+      }
+    },
+    /**
+     * 等待预览环境就绪
+     */
+    waitForPreviewReady() {
+      // 如果已经就绪，直接发送
+      if (this.previewReady) {
+        this.$nextTick(() => {
+          this.sendCodeToPreview()
+        })
+        return
+      }
+
+      // 否则等待就绪消息
+      const checkReady = () => {
+        if (this.previewReady) {
+          this.$nextTick(() => {
+            this.sendCodeToPreview()
+          })
+        } else {
+          setTimeout(checkReady, 100)
+        }
+      }
+      checkReady()
+    },
+    /**
+     * 发送代码到预览环境
+     */
+    sendCodeToPreview(retryCount = 0) {
       if (!this.editableCode || !this.editableCode.trim()) {
         return
+      }
+
+      // 检查 iframe 是否就绪
+      const iframe = this.$refs.previewFrame
+      if (!iframe || !iframe.contentWindow) {
+        // 如果重试次数少于 10 次，等待后重试（增加重试次数）
+        if (retryCount < 10) {
+          console.log(`预览 iframe 未就绪，等待重试 (${retryCount + 1}/10)...`)
+          setTimeout(() => {
+            this.sendCodeToPreview(retryCount + 1)
+          }, 300)
+          return
+        } else {
+          console.warn('预览 iframe 未就绪，已重试 10 次')
+          this.error = '预览环境加载超时，请刷新重试'
+          this.compiling = false
+          Message.error('预览环境加载超时，请刷新页面重试')
+          return
+        }
+      }
+
+      // 检查 contentWindow 是否可访问
+      try {
+        // 尝试访问 contentWindow，如果跨域会抛出错误
+        if (!iframe.contentWindow.postMessage) {
+          throw new Error('iframe contentWindow 不可访问')
+        }
+      } catch (error) {
+        console.error('iframe 访问错误:', error)
+        if (retryCount < 5) {
+          setTimeout(() => {
+            this.sendCodeToPreview(retryCount + 1)
+          }, 300)
+          return
+        } else {
+          this.error = '预览环境加载失败，可能是跨域问题'
+          this.compiling = false
+          Message.error('预览环境加载失败')
+          return
+        }
       }
 
       this.compiling = true
       this.error = null
 
+      console.log('📤 发送代码到预览环境')
+
       try {
-        // 获取基础 URL（用于资源路径）
-        // 确保以 / 结尾
-        let baseUrl = window.location.origin + window.location.pathname
-        if (!baseUrl.endsWith('/')) {
-          baseUrl += '/'
-        }
-
-        console.log('开始编译，baseUrl:', baseUrl)
-        console.log('代码长度:', this.editableCode.length)
-
-        // 编译并构建预览 HTML
-        const compiled = compileVueSFC(this.editableCode)
-        console.log('编译结果:', compiled)
-        if (!compiled.success) {
-          throw new Error(compiled.error || '编译失败')
-        }
-        console.log('生成的完整脚本:')
-        console.log(compiled.script)
-
-        const html = await buildPreviewHTML(this.editableCode, { baseUrl })
-
-        console.log('HTML 生成成功，长度:', html.length)
-        this.previewHTML = html
-
-        // 注入到 iframe - 使用 srcdoc 属性
-        // 等待编译状态更新后再设置 iframe 内容
-        this.$nextTick(() => {
-          // 再次等待，确保 iframe 已经渲染
-          this.$nextTick(() => {
-            if (this.$refs.previewFrame) {
-              const iframe = this.$refs.previewFrame
-              console.log('设置 iframe srcdoc，HTML 长度:', html.length)
-              // 使用 srcdoc 属性，这是更可靠的方式
-              iframe.srcdoc = html
-
-              // 监听 iframe 加载完成
-              iframe.onload = () => {
-                console.log('iframe 加载完成')
-              }
-            } else {
-              console.warn('previewFrame ref not found')
-            }
-          })
-        })
+        iframe.contentWindow.postMessage(
+          {
+            type: 'RENDER_CODE',
+            code: this.editableCode,
+            customComponents: this.customComponents || [],
+          },
+          '*'
+        )
+        console.log('✅ 代码已发送到预览环境')
       } catch (error) {
-        console.error('预览编译失败:', error)
-        this.error = error.message || '编译失败'
-        Message.error('预览编译失败: ' + this.error)
-      } finally {
+        console.error('发送代码失败:', error)
+        this.error = error.message
         this.compiling = false
+        Message.error('发送代码失败: ' + error.message)
       }
     },
-    handleRefresh() {
-      this.compileAndPreview()
+    /**
+     * 处理来自预览环境的消息
+     */
+    handlePreviewMessage(event) {
+      const data = event.data
+
+      if (!data || !data.type) return
+
+      console.log('📩 收到预览环境消息:', data.type, data)
+
+      switch (data.type) {
+        case 'IFRAME_LOADING':
+          console.log('🔵 iframe HTML 开始加载')
+          break
+        case 'PREVIEW_READY':
+          console.log('📩 收到 PREVIEW_READY 消息')
+          this.previewReady = true
+          this.clearReadyTimeout() // 清除超时计时
+          console.log('✅ 预览环境已就绪')
+          // 预览环境就绪后，如果有代码且 iframe 已加载，发送代码
+          if (this.editableCode) {
+            this.$nextTick(() => {
+              this.sendCodeToPreview()
+            })
+          } else {
+            this.compiling = false
+          }
+          break
+
+        case 'RENDER_SUCCESS':
+          this.compiling = false
+          this.error = null
+          console.log('✅ 渲染成功')
+          break
+
+        case 'RENDER_ERROR':
+          this.compiling = false
+          this.error = data.error || '渲染失败'
+          console.error('❌ 渲染失败:', data.error)
+          Message.error('预览失败: ' + this.error)
+          break
+      }
     },
     async handleCopy() {
       try {
@@ -391,6 +550,47 @@ export default {
   background: #fff;
 }
 
+.preview-loading-overlay,
+.preview-error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 10;
+}
+
+.preview-loading-overlay {
+  color: #409eff;
+}
+
+.preview-error-overlay {
+  color: #f56c6c;
+}
+
+.preview-loading-overlay i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: rotating 2s linear infinite;
+}
+
+.preview-error-overlay i {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.preview-error-overlay h3 {
+  margin: 16px 0;
+}
+
+/* 保留旧类名以防其他地方使用 */
 .preview-loading,
 .preview-error {
   display: flex;

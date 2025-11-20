@@ -9,9 +9,14 @@
       <div class="text-center py-12">
         <i class="el-icon-document-add text-gray-300 mb-4" style="font-size: 64px"></i>
         <p class="text-gray-500 mb-6">点击下方按钮开始生成代码</p>
-        <el-button type="primary" size="large" icon="el-icon-magic-stick" @click="handleGenerate">
-          开始生成
-        </el-button>
+        <div class="flex gap-3 justify-center">
+          <el-button type="primary" size="large" icon="el-icon-magic-stick" @click="handleGenerate">
+            开始生成
+          </el-button>
+          <el-button type="success" size="large" icon="el-icon-view" @click="handleQuickTest">
+            快速测试预览
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -40,7 +45,9 @@
           </div>
           <div class="flex gap-2">
             <el-button icon="el-icon-view" @click="showLivePreview = true"> 在线预览 </el-button>
-            <el-button icon="el-icon-document" @click="showPreviewDialog = true"> 查看代码 </el-button>
+            <el-button icon="el-icon-document" @click="showPreviewDialog = true">
+              查看代码
+            </el-button>
             <el-button icon="el-icon-document-copy" @click="handleCopyCode"> 复制代码 </el-button>
             <el-button icon="el-icon-download" @click="handleDownloadCode"> 下载文件 </el-button>
             <el-button icon="el-icon-refresh" type="warning" @click="handleRegenerate">
@@ -87,27 +94,6 @@
             </ul>
           </div>
         </el-alert>
-
-        <div class="grid grid-cols-3 gap-4">
-          <div class="rounded-lg bg-blue-50 p-4 text-center">
-            <div class="text-2xl font-bold text-blue-600">
-              {{ codeStats.lines }}
-            </div>
-            <div class="text-sm text-gray-600">代码行数</div>
-          </div>
-          <div class="rounded-lg bg-green-50 p-4 text-center">
-            <div class="text-2xl font-bold text-green-600">
-              {{ codeStats.components }}
-            </div>
-            <div class="text-sm text-gray-600">组件数量</div>
-          </div>
-          <div class="rounded-lg bg-purple-50 p-4 text-center">
-            <div class="text-2xl font-bold text-purple-600">
-              {{ codeStats.apis }}
-            </div>
-            <div class="text-sm text-gray-600">API 接口</div>
-          </div>
-        </div>
 
         <el-collapse>
           <el-collapse-item v-if="generationResult?.prompt" title="查看 AI 提示词" name="prompt">
@@ -298,6 +284,58 @@ export default {
     handleRegenerate() {
       this.setGeneratedCode('')
       this.handleGenerate()
+    },
+    handleQuickTest() {
+      // 使用简单的空模板测试
+      const testCode = [
+        '<template>',
+        '  <div class="test-preview">',
+        '    <h2>预览测试</h2>',
+        '    <p>这是一个简单的测试组件</p>',
+        '    <el-button type="primary">测试按钮</el-button>',
+        '  </div>',
+        '</template>',
+        '',
+        '<' + 'script>',
+        'export default {',
+        '  name: "TestPreview",',
+        '  data() {',
+        '    return {',
+        '      message: "Hello Preview"',
+        '    }',
+        '  },',
+        '  mounted() {',
+        '    console.log("测试组件已挂载")',
+        '  }',
+        '}',
+        '</' + 'script>',
+        '',
+        '<' + 'style scoped>',
+        '.test-preview {',
+        '  padding: 20px;',
+        '}',
+        '',
+        '.test-preview h2 {',
+        '  color: #409eff;',
+        '  margin-bottom: 16px;',
+        '}',
+        '',
+        '.test-preview p {',
+        '  margin-bottom: 16px;',
+        '  color: #606266;',
+        '}',
+        '</' + 'style>',
+      ].join('\n')
+
+      // 设置生成的代码
+      this.setGeneratedCode(testCode)
+
+      // 直接打开预览
+      this.$nextTick(() => {
+        this.showLivePreview = true
+      })
+
+      Message.success('已加载测试模板，正在打开预览...')
     },
     async handleCopyCode() {
       try {

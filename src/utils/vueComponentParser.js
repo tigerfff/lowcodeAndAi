@@ -31,7 +31,7 @@ export function parseVueComponent(code) {
     const scriptMatch = code.match(/<script[^>]*>([\s\S]*?)<\/script>/i)
     if (scriptMatch) {
       result.script = scriptMatch[1].trim()
-      
+
       // 从 script 中提取更多信息
       const scriptInfo = parseScriptContent(result.script)
       result.name = scriptInfo.name
@@ -139,37 +139,37 @@ function extractProps(scriptContent) {
       if (objectProps) {
         objectProps.forEach(p => {
           const propName = p.replace(/\s*:\s*\{/, '').trim()
-          
+
           // 尝试提取该 prop 的详细信息
           const propDetailRegex = new RegExp(`${propName}\\s*:\\s*\\{([\\s\\S]*?)\\}`, 'm')
           const propDetailMatch = propsStr.match(propDetailRegex)
-          
+
           let type = 'any'
           let required = false
           let defaultValue = undefined
-          
+
           if (propDetailMatch) {
             const propDetail = propDetailMatch[1]
-            
+
             // 提取 type
             const typeMatch = propDetail.match(/type\s*:\s*(\w+)/m)
             if (typeMatch) {
               type = typeMatch[1].toLowerCase()
             }
-            
+
             // 提取 required
             const requiredMatch = propDetail.match(/required\s*:\s*(true|false)/m)
             if (requiredMatch) {
               required = requiredMatch[1] === 'true'
             }
-            
+
             // 提取 default
             const defaultMatch = propDetail.match(/default\s*:\s*([^,\n]+)/m)
             if (defaultMatch) {
               defaultValue = defaultMatch[1].trim()
             }
           }
-          
+
           props.push({
             name: propName,
             type,
@@ -215,10 +215,10 @@ function extractMethods(scriptContent) {
 
   if (methodsMatch) {
     const methodsStr = methodsMatch[1]
-    
+
     // 匹配方法名
     const methodMatches = methodsStr.matchAll(/(\w+)\s*\(/g)
-    
+
     for (const match of methodMatches) {
       methods.push(match[1])
     }
@@ -303,10 +303,7 @@ export function generateComponentDescription(parsedComponent) {
  */
 export function suggestImportPath(componentName) {
   // 将 PascalCase 转换为 kebab-case
-  const kebabName = componentName
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .toLowerCase()
-  
+  const kebabName = componentName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
+
   return `@/components/${componentName}.vue`
 }
-

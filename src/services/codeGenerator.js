@@ -6,6 +6,8 @@
 import Handlebars from 'handlebars'
 import { getTemplateById } from './templateManager.js'
 import { callAIGenerate } from './aiService.js'
+import { utilsList } from '../config/utilsList'
+import { validatorsList } from '../config/validatorsList'
 
 // 注册 Handlebars Helpers
 Handlebars.registerHelper('kebabCase', str => {
@@ -294,7 +296,7 @@ ${templateSource}
 
     // 构建组件映射表（用于解析提示词中的@mention）
     const componentMaps = {}
-    
+
     if (config.slots.searchArea && config.slots.searchArea.length > 0) {
       prompt += `### 搜索区组件 (${config.slots.searchArea.length}个)\n\n`
       const searchMap = {}
@@ -308,7 +310,7 @@ ${templateSource}
           prompt += ` - 属性: ${JSON.stringify(comp.props)}`
         }
         prompt += '\n'
-        
+
         // 构建映射表
         searchMap[friendlyName] = {
           id: comp.id,
@@ -320,7 +322,7 @@ ${templateSource}
       })
       componentMaps.searchArea = searchMap
       prompt += '\n'
-      
+
       // 添加搜索区提示词
       if (config.slotPrompts && config.slotPrompts.searchArea) {
         prompt += `**搜索区提示词:**\n${config.slotPrompts.searchArea}\n\n`
@@ -346,7 +348,7 @@ ${templateSource}
           prompt += ` - 属性: ${JSON.stringify(comp.props)}`
         }
         prompt += '\n'
-        
+
         // 构建映射表
         actionMap[friendlyName] = {
           id: comp.id,
@@ -357,7 +359,7 @@ ${templateSource}
       })
       componentMaps.actionArea = actionMap
       prompt += '\n'
-      
+
       // 添加操作区提示词
       if (config.slotPrompts && config.slotPrompts.actionArea) {
         prompt += `**操作区提示词:**\n${config.slotPrompts.actionArea}\n\n`
@@ -384,7 +386,7 @@ ${templateSource}
           prompt += ` - 属性: ${JSON.stringify(col.props)}`
         }
         prompt += '\n'
-        
+
         // 构建映射表
         columnMap[friendlyName] = {
           id: col.id,
@@ -396,7 +398,7 @@ ${templateSource}
       })
       componentMaps.tableColumns = columnMap
       prompt += '\n'
-      
+
       // 添加表格列提示词
       if (config.slotPrompts && config.slotPrompts.tableColumns) {
         prompt += `**表格列提示词:**\n${config.slotPrompts.tableColumns}\n\n`
@@ -409,7 +411,7 @@ ${templateSource}
         prompt += '\n'
       }
     }
-    
+
     // 添加组件联动说明
     if (config.slotPrompts && Object.values(config.slotPrompts).some(p => p && p.trim())) {
       prompt += `\n### 组件联动规则说明\n\n`
@@ -443,7 +445,7 @@ ${templateSource}
   if (config.customComponents && config.customComponents.length > 0) {
     prompt += `\n## 五.二、自定义组件\n\n`
     prompt += `以下是用户定义的自定义组件，在生成代码时需要使用这些组件：\n\n`
-    
+
     config.customComponents.forEach((customComp, index) => {
       prompt += `### ${index + 1}. ${customComp.label || customComp.name}\n\n`
       prompt += `- 组件名: ${customComp.name}\n`
@@ -451,7 +453,7 @@ ${templateSource}
       if (customComp.description) {
         prompt += `- 描述: ${customComp.description}\n`
       }
-      
+
       if (customComp.props && customComp.props.length > 0) {
         prompt += `- Props:\n`
         customComp.props.forEach(prop => {
@@ -462,22 +464,113 @@ ${templateSource}
           prompt += propDesc + '\n'
         })
       }
-      
+
       if (customComp.events && customComp.events.length > 0) {
         prompt += `- Events: ${customComp.events.join(', ')}\n`
       }
-      
+
       if (customComp.code) {
         prompt += `\n**组件源码:**\n\`\`\`vue\n${customComp.code}\n\`\`\`\n`
       }
-      
+
       prompt += '\n'
     })
-    
+
     prompt += `**注意事项:**\n`
     prompt += `- 使用自定义组件时，需要在 <script> 中导入并注册\n`
     prompt += `- 导入示例: import CustomComponent from '@/components/CustomComponent.vue'\n`
     prompt += `- 注册示例: components: { CustomComponent }\n\n`
+  }
+
+  // 提取提示词中引用的工具函数和校验规则
+  const referencedUtils = new Set()
+  const referencedValidators = new Set()
+
+  if (config.slotPrompts) {
+    Object.values(config.slotPrompts).forEach(prompt => {
+      if (prompt && typeof prompt === 'string') {
+        // 提取 $xxx 工具函数引用
+        const utilMatches = prompt.match(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)
+        if (utilMatches) {
+          utilMatches.forEach(match => {
+            const utilName = match.substring(1) // 移除 $
+            referencedUtils.add(utilName)
+          })
+        }
+
+        // 提取 !xxx 校验规则引用
+        const validatorMatches = prompt.match(/!([a-zA-Z_][a-zA-Z0-9_]*)/g)
+        if (validatorMatches) {
+          validatorMatches.forEach(match => {
+            const validatorName = match.substring(1) // 移除 !
+            referencedValidators.add(validatorName)
+          })
+        }
+      }
+    })
+  }
+
+  // 添加工具函数和校验规则说明
+  if (referencedUtils.size > 0 || referencedValidators.size > 0) {
+    prompt += `\n## 五.三、工具函数和校验规则\n\n`
+    prompt += `在提示词中使用了以下工具函数和校验规则，需要在生成的代码中正确使用：\n\n`
+
+    // 工具函数
+    if (referencedUtils.size > 0) {
+      prompt += `### 工具函数（Utils）\n\n`
+      prompt += `工具函数通过 \`__previewUtils\` 全局对象访问，使用方式：\n`
+      prompt += `- 在 methods 中：\`this.__previewUtils.函数名(参数)\`\n`
+      prompt += `- 在 template 中：需要先在 computed 或 methods 中封装\n\n`
+      prompt += `已引用的工具函数：\n\n`
+
+      referencedUtils.forEach(utilName => {
+        const utilInfo = utilsList.find(u => u.name === utilName)
+        if (utilInfo) {
+          prompt += `**$${utilInfo.name}** - ${utilInfo.label}\n`
+          prompt += `- 描述: ${utilInfo.description}\n`
+          prompt += `- 用法: ${utilInfo.usage}\n`
+          if (utilInfo.params && utilInfo.params.length > 0) {
+            prompt += `- 参数: ${utilInfo.params.join(', ')}\n`
+          }
+          prompt += `- 调用示例: \`this.__previewUtils.${utilInfo.name}(...)\`\n\n`
+        } else {
+          prompt += `**$${utilName}** - （配置中未找到详细信息）\n\n`
+        }
+      })
+    }
+
+    // 校验规则
+    if (referencedValidators.size > 0) {
+      prompt += `### 校验规则（Validators）\n\n`
+      prompt += `校验规则通过 \`__previewValidators\` 全局对象访问，使用方式：\n`
+      prompt += `- 对于规则对象：\`rules: [this.__previewValidators.required()]\`\n`
+      prompt += `- 对于验证函数：\`rules: [{ validator: this.__previewValidators.phone }]\`\n\n`
+      prompt += `已引用的校验规则：\n\n`
+
+      referencedValidators.forEach(validatorName => {
+        const validatorInfo = validatorsList.find(v => v.name === validatorName)
+        if (validatorInfo) {
+          prompt += `**!${validatorInfo.name}** - ${validatorInfo.label}\n`
+          prompt += `- 描述: ${validatorInfo.description}\n`
+          prompt += `- 用法: ${validatorInfo.usage}\n`
+          prompt += `- 分类: ${validatorInfo.category}\n`
+
+          // 根据校验规则类型提供使用示例
+          if (['required', 'minLength', 'maxLength', 'lengthRange'].includes(validatorName)) {
+            prompt += `- 使用示例: \`rules: [this.__previewValidators.${validatorName}()]\`\n\n`
+          } else {
+            prompt += `- 使用示例: \`rules: [{ validator: this.__previewValidators.${validatorName}, trigger: 'blur' }]\`\n\n`
+          }
+        } else {
+          prompt += `**!${validatorName}** - （配置中未找到详细信息）\n\n`
+        }
+      })
+
+      prompt += `**注意事项:**\n`
+      prompt += `- 校验规则必须绑定到 el-form-item 的 :rules 属性\n`
+      prompt += `- el-form 需要设置 :model 和 :rules\n`
+      prompt += `- 需要给表单项设置 prop 属性\n\n`
+    }
   }
 
   prompt += `\n## 六、生成要求

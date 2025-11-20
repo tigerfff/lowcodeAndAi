@@ -1,7 +1,7 @@
 <template>
-  <el-dialog 
-    :visible.sync="internalVisible" 
-    title="选择组件" 
+  <el-dialog
+    :visible.sync="internalVisible"
+    title="选择组件"
     width="800px"
     :append-to-body="true"
     :modal-append-to-body="true"
@@ -31,8 +31,8 @@
             class="component-card add-custom-component cursor-pointer rounded-lg border-2 border-dashed border-primary p-4 transition-all hover:border-primary hover:shadow-md hover:bg-primary-light"
             @click="showAddCustomComponentDialog"
           >
-            <div class="flex flex-col items-center justify-center" style="min-height: 100px;">
-              <i class="el-icon-plus text-primary" style="font-size: 32px;"></i>
+            <div class="flex flex-col items-center justify-center" style="min-height: 100px">
+              <i class="el-icon-plus text-primary" style="font-size: 32px"></i>
               <h4 class="mt-2 font-semibold text-primary">添加自定义组件</h4>
               <p class="mt-1 text-xs text-gray-500">粘贴组件代码</p>
             </div>
@@ -46,12 +46,21 @@
             @click="selectComponent(component)"
           >
             <div class="mb-2 flex items-center gap-2">
-              <i :class="getComponentIcon(component.category)" class="text-primary" style="font-size: 20px;"></i>
+              <i
+                :class="getComponentIcon(component.category)"
+                class="text-primary"
+                style="font-size: 20px"
+              ></i>
               <h4 class="font-semibold text-gray-900">{{ component.label }}</h4>
             </div>
             <p class="mb-2 text-xs text-gray-500">{{ component.name }}</p>
             <p class="text-sm text-gray-600">{{ component.description }}</p>
-            <el-tag v-if="component.category === 'business'" size="small" type="warning" class="mt-2">
+            <el-tag
+              v-if="component.category === 'business'"
+              size="small"
+              type="warning"
+              class="mt-2"
+            >
               业务组件
             </el-tag>
             <el-tag v-if="component.category === 'custom'" size="small" type="success" class="mt-2">
@@ -71,8 +80,14 @@
           </div>
         </div>
 
-        <el-empty v-if="filteredComponents.length === 0 && activeCategory !== 'custom'" description="没有找到匹配的组件" />
-        <el-empty v-if="filteredComponents.length === 0 && activeCategory === 'custom'" description="暂无自定义组件" />
+        <el-empty
+          v-if="filteredComponents.length === 0 && activeCategory !== 'custom'"
+          description="没有找到匹配的组件"
+        />
+        <el-empty
+          v-if="filteredComponents.length === 0 && activeCategory === 'custom'"
+          description="暂无自定义组件"
+        />
       </div>
     </div>
   </el-dialog>
@@ -130,13 +145,28 @@ export default {
         result = result.filter(component => this.allowedComponents.includes(component.name))
         console.log('✅ 按 allowedComponents 过滤:', beforeFilter, '->', result.length)
         console.log('📋 允许的组件名:', this.allowedComponents.slice(0, 10).join(', '), '...')
-        console.log('📦 匹配的组件:', result.map(c => c.name).slice(0, 10).join(', '), '...')
+        console.log(
+          '📦 匹配的组件:',
+          result
+            .map(c => c.name)
+            .slice(0, 10)
+            .join(', '),
+          '...'
+        )
       }
 
       if (this.activeCategory !== 'all') {
         const beforeFilter = result.length
         result = result.filter(component => component.category === this.activeCategory)
-        console.log('✅ 按分类过滤:', beforeFilter, '->', result.length, '(分类:', this.activeCategory, ')')
+        console.log(
+          '✅ 按分类过滤:',
+          beforeFilter,
+          '->',
+          result.length,
+          '(分类:',
+          this.activeCategory,
+          ')'
+        )
       }
 
       if (this.searchKeyword) {
@@ -149,7 +179,15 @@ export default {
             component.description && component.description.toLowerCase().includes(keyword)
           return nameMatch || labelMatch || descMatch
         })
-        console.log('✅ 按关键词过滤:', beforeFilter, '->', result.length, '(关键词:', this.searchKeyword, ')')
+        console.log(
+          '✅ 按关键词过滤:',
+          beforeFilter,
+          '->',
+          result.length,
+          '(关键词:',
+          this.searchKeyword,
+          ')'
+        )
       }
 
       console.log('🎯 最终结果:', result.length, '个组件')

@@ -67,7 +67,7 @@
               icon="el-icon-setting"
               type="default"
               @click="componentDrawerVisible = true"
-            > 
+            >
               组件配置
             </el-button>
             <el-button block icon="el-icon-link" type="default" @click="apiDrawerVisible = true">

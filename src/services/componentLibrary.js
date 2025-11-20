@@ -113,10 +113,10 @@ export async function getAllComponents() {
 
     // 从 JSON 文件加载组件
     const jsonComponents = await loadComponentsFromJson()
-    
+
     // 转换为应用格式
     const transformedComponents = jsonComponents.map(transformComponent)
-    
+
     // 添加一些旧的硬编码组件以保持兼容性
     const legacyComponents = {
       search: [
@@ -530,25 +530,37 @@ export async function getAllComponents() {
     }
 
     // 合并所有组件（优先使用从 JSON 加载的组件）
-    const allComponents = [...transformedComponents, ...legacyComponents.search, ...legacyComponents.table, ...legacyComponents.action]
-    
+    const allComponents = [
+      ...transformedComponents,
+      ...legacyComponents.search,
+      ...legacyComponents.table,
+      ...legacyComponents.action,
+    ]
+
     // 去重（JSON 中的组件优先）
     const uniqueComponents = []
     const seenNames = new Set()
-    
+
     for (const comp of allComponents) {
       if (!seenNames.has(comp.name)) {
         uniqueComponents.push(comp)
         seenNames.add(comp.name)
       }
     }
-    
+
     // 缓存结果
     cachedComponents = uniqueComponents
-    
+
     console.log('✅ 加载组件:', uniqueComponents.length, '个')
-    console.log('📦 组件列表:', uniqueComponents.map(c => c.name).slice(0, 20).join(', '), '...')
-    
+    console.log(
+      '📦 组件列表:',
+      uniqueComponents
+        .map(c => c.name)
+        .slice(0, 20)
+        .join(', '),
+      '...'
+    )
+
     return uniqueComponents
   } catch (error) {
     console.error('Failed to load components:', error)

@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <i :class="icon" style="font-size: 18px;"></i>
+          <i :class="icon" style="font-size: 18px"></i>
           <span class="font-semibold">{{ title }}</span>
           <el-tag v-if="maxCount" size="small" type="info">
             {{ slotComponents.length }} / {{ maxCount }}
@@ -33,10 +33,17 @@
           </div>
           <div class="text-xs text-gray-500">
             {{ component.component }}
-            <span v-if="component.id" class="ml-2 text-gray-400">(id: {{ component.id.split('_').slice(-1)[0] }})</span>
+            <span v-if="component.id" class="ml-2 text-gray-400"
+              >(id: {{ component.id.split('_').slice(-1)[0] }})</span
+            >
           </div>
         </div>
-        <el-button icon="el-icon-delete" size="small" type="text" @click="handleRemoveComponent(component.id)">
+        <el-button
+          icon="el-icon-delete"
+          size="small"
+          type="text"
+          @click="handleRemoveComponent(component.id)"
+        >
           删除
         </el-button>
       </div>
@@ -49,7 +56,13 @@
       <div class="mb-2 flex items-center gap-2">
         <i class="el-icon-edit-outline text-gray-500"></i>
         <span class="text-sm font-medium text-gray-700">Slot 提示词</span>
-        <el-tooltip content="输入 @ 可以快速引用组件，描述组件间的联动关系" placement="top">
+        <el-tooltip placement="top">
+          <div slot="content" style="max-width: 300px;">
+            <div>支持快速引用：</div>
+            <div>• <strong>@</strong> - 引用组件</div>
+            <div>• <strong>$</strong> - 引用工具函数（如 $formatDate）</div>
+            <div>• <strong>!</strong> - 引用校验规则（如 !required）</div>
+          </div>
           <i class="el-icon-question text-gray-400 cursor-help"></i>
         </el-tooltip>
       </div>
@@ -57,6 +70,8 @@
         :value="slotPrompt"
         :placeholder="slotPromptPlaceholder"
         :mention-items="slotComponents"
+        :utils-items="utilsList"
+        :validators-items="validatorsList"
         @input="handlePromptInput"
       />
     </div>
@@ -68,6 +83,8 @@ import { MessageBox } from 'element-ui'
 import { mapActions, mapState } from 'vuex'
 import { getComponentByName } from '../services/componentLibrary'
 import MentionTextarea from './MentionTextarea.vue'
+import { utilsList } from '../config/utilsList'
+import { validatorsList } from '../config/validatorsList'
 
 export default {
   name: 'ComponentSlot',
@@ -98,6 +115,12 @@ export default {
     },
   },
   computed: {
+    utilsList() {
+      return utilsList
+    },
+    validatorsList() {
+      return validatorsList
+    },
     ...mapState('editor', ['slotPrompts']),
     slotComponents() {
       const slots = this.$store.state.editor.slots || {}
@@ -120,13 +143,13 @@ export default {
       componentLabels: {},
     }
   },
-  mounted() {
-    this.loadComponentLabels()
-  },
   watch: {
     slotComponents() {
       this.loadComponentLabels()
     },
+  },
+  mounted() {
+    this.loadComponentLabels()
   },
   methods: {
     ...mapActions('editor', ['removeComponent', 'updateSlotPrompt']),
