@@ -272,9 +272,7 @@ export default {
         const systemPrompt = `你是一名资深的前端工程师，擅长基于 Vue2 + Element UI 体系进行页面设计和代码生成。当前模板：${
           this.selectedTemplate?.label || '通用页面'
         }；组件数量：${
-          (this.slots.searchArea?.length || 0) +
-          (this.slots.actionArea?.length || 0) +
-          (this.slots.tableColumns?.length || 0)
+          this.$store.getters['editor/totalComponentCount']
         }；API 数量：${this.apiConfigs.length}`
 
         const messages = [

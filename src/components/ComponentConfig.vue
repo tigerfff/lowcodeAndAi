@@ -35,29 +35,14 @@
 
     <div class="space-y-6">
       <ComponentSlot
-        v-if="selectedTemplate?.slots?.searchArea"
-        slot-name="searchArea"
-        title="搜索区组件"
-        icon="el-icon-search"
-        :max-count="selectedTemplate.slots.searchArea.maxCount"
-        :allowed-components="selectedTemplate.slots.searchArea.allowedComponents"
-      />
-
-      <ComponentSlot
-        v-if="selectedTemplate?.slots?.actionArea"
-        slot-name="actionArea"
-        title="操作区按钮"
-        icon="el-icon-s-operation"
-        :max-count="selectedTemplate.slots.actionArea.maxCount"
-        :allowed-components="selectedTemplate.slots.actionArea.allowedComponents"
-      />
-
-      <ComponentSlot
-        v-if="selectedTemplate?.slots?.tableColumns"
-        slot-name="tableColumns"
-        title="表格列配置"
-        icon="el-icon-grid"
-        :allowed-components="selectedTemplate.slots.tableColumns.allowedComponents"
+        v-for="(slotMeta, slotName) in slotMetaList"
+        :key="slotName"
+        :slot-name="slotName"
+        :title="slotMeta.label || slotName"
+        :icon="getSlotIcon(slotName, slotMeta)"
+        :max-count="slotMeta.maxCount"
+        :min-count="slotMeta.minCount"
+        :allowed-components="slotMeta.allowedComponents"
       />
     </div>
 
@@ -95,7 +80,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('editor', ['selectedTemplate', 'pageInfo']),
+    ...mapState('editor', ['selectedTemplate', 'pageInfo', 'slotMeta']),
     pageName: {
       get() {
         return this.pageInfo.pageName
@@ -120,6 +105,17 @@ export default {
         this.updatePageInfo({ breadcrumb: val })
       },
     },
+    // 动态获取 slot 列表，按顺序排列
+    slotMetaList() {
+      const meta = this.slotMeta || {}
+      // 可以按 order 字段排序，如果模板提供了的话
+      return Object.entries(meta)
+        .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0))
+        .reduce((acc, [key, value]) => {
+          acc[key] = value
+          return acc
+        }, {})
+    },
   },
   methods: {
     ...mapActions('editor', ['updatePageInfo', 'addComponent']),
@@ -134,6 +130,20 @@ export default {
     },
     handleAddCustomComponent() {
       this.addCustomComponentDialogVisible = true
+    },
+    // 根据 slot 名称或元数据获取图标
+    getSlotIcon(slotName, slotMeta) {
+      // 优先使用元数据中定义的 icon
+      if (slotMeta.icon) {
+        return slotMeta.icon
+      }
+      // 默认图标映射
+      const iconMap = {
+        searchArea: 'el-icon-search',
+        actionArea: 'el-icon-s-operation',
+        tableColumns: 'el-icon-grid',
+      }
+      return iconMap[slotName] || 'el-icon-menu'
     },
   },
   provide() {

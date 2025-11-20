@@ -184,10 +184,7 @@ export default {
       const code = this.generatedCode
       return {
         lines: code ? code.split('\n').length : 0,
-        components:
-          (this.slots.searchArea?.length || 0) +
-          (this.slots.actionArea?.length || 0) +
-          (this.slots.tableColumns?.length || 0),
+        components: this.$store.getters['editor/totalComponentCount'],
         apis: this.apiConfigs?.length || 0,
       }
     },

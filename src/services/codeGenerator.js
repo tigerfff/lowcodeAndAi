@@ -297,14 +297,23 @@ ${templateSource}
     // 构建组件映射表（用于解析提示词中的@mention）
     const componentMaps = {}
 
-    if (config.slots.searchArea && config.slots.searchArea.length > 0) {
-      prompt += `### 搜索区组件 (${config.slots.searchArea.length}个)\n\n`
-      const searchMap = {}
-      config.slots.searchArea.forEach((comp, index) => {
-        const friendlyName = comp.friendlyName || comp.label || `组件${index + 1}`
+    // 动态遍历所有 slot
+    Object.entries(config.slots || {}).forEach(([slotName, components]) => {
+      if (!Array.isArray(components) || components.length === 0) return
+
+      // 从模板元数据获取 slot 显示名称
+      const slotMeta = template.slots?.[slotName] || {}
+      const slotLabel = slotMeta.label || slotName
+
+      prompt += `### ${slotLabel} (${components.length}个)\n\n`
+      const slotMap = {}
+
+      components.forEach((comp, index) => {
+        const friendlyName = comp.friendlyName || comp.label || comp.text || `组件${index + 1}`
         prompt += `${index + 1}. ${friendlyName} (${comp.component})`
         prompt += ` - ID: ${comp.id}`
         if (comp.label) prompt += ` - 标签: ${comp.label}`
+        if (comp.text) prompt += ` - 文字: ${comp.text}`
         if (comp.model) prompt += ` - 字段: ${comp.model}`
         if (comp.props && Object.keys(comp.props).length > 0) {
           prompt += ` - 属性: ${JSON.stringify(comp.props)}`
@@ -312,105 +321,30 @@ ${templateSource}
         prompt += '\n'
 
         // 构建映射表
-        searchMap[friendlyName] = {
+        slotMap[friendlyName] = {
           id: comp.id,
           component: comp.component,
           model: comp.model,
           label: comp.label,
+          text: comp.text,
           props: comp.props,
         }
       })
-      componentMaps.searchArea = searchMap
+      componentMaps[slotName] = slotMap
       prompt += '\n'
 
-      // 添加搜索区提示词
-      if (config.slotPrompts && config.slotPrompts.searchArea) {
-        prompt += `**搜索区提示词:**\n${config.slotPrompts.searchArea}\n\n`
+      // 添加 slot 提示词
+      if (config.slotPrompts && config.slotPrompts[slotName]) {
+        prompt += `**${slotLabel}提示词:**\n${config.slotPrompts[slotName]}\n\n`
         prompt += `**提示词中的组件引用映射:**\n`
-        Object.keys(searchMap).forEach(name => {
-          const comp = searchMap[name]
+        Object.keys(slotMap).forEach(name => {
+          const comp = slotMap[name]
           const shortId = comp.id ? comp.id.split('_').slice(-1)[0] : ''
-          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id}, model: ${comp.model || '无'})\n`
+          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id}${comp.model ? ', model: ' + comp.model : ''})\n`
         })
         prompt += '\n'
       }
-    }
-
-    if (config.slots.actionArea && config.slots.actionArea.length > 0) {
-      prompt += `### 操作区组件 (${config.slots.actionArea.length}个)\n\n`
-      const actionMap = {}
-      config.slots.actionArea.forEach((comp, index) => {
-        const friendlyName = comp.friendlyName || comp.label || comp.text || `按钮${index + 1}`
-        prompt += `${index + 1}. ${friendlyName} (${comp.component})`
-        prompt += ` - ID: ${comp.id}`
-        if (comp.label || comp.text) prompt += ` - 文字: ${comp.label || comp.text}`
-        if (comp.props && Object.keys(comp.props).length > 0) {
-          prompt += ` - 属性: ${JSON.stringify(comp.props)}`
-        }
-        prompt += '\n'
-
-        // 构建映射表
-        actionMap[friendlyName] = {
-          id: comp.id,
-          component: comp.component,
-          text: comp.text || comp.label,
-          props: comp.props,
-        }
-      })
-      componentMaps.actionArea = actionMap
-      prompt += '\n'
-
-      // 添加操作区提示词
-      if (config.slotPrompts && config.slotPrompts.actionArea) {
-        prompt += `**操作区提示词:**\n${config.slotPrompts.actionArea}\n\n`
-        prompt += `**提示词中的组件引用映射:**\n`
-        Object.keys(actionMap).forEach(name => {
-          const comp = actionMap[name]
-          const shortId = comp.id ? comp.id.split('_').slice(-1)[0] : ''
-          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id})\n`
-        })
-        prompt += '\n'
-      }
-    }
-
-    if (config.slots.tableColumns && config.slots.tableColumns.length > 0) {
-      prompt += `### 表格列 (${config.slots.tableColumns.length}个)\n\n`
-      const columnMap = {}
-      config.slots.tableColumns.forEach((col, index) => {
-        const friendlyName = col.friendlyName || col.props?.label || `列${index + 1}`
-        prompt += `${index + 1}. ${friendlyName} (${col.component})`
-        prompt += ` - ID: ${col.id}`
-        if (col.props?.label) prompt += ` - 标签: ${col.props.label}`
-        if (col.props?.prop) prompt += ` - 字段: ${col.props.prop}`
-        if (col.props && Object.keys(col.props).length > 0) {
-          prompt += ` - 属性: ${JSON.stringify(col.props)}`
-        }
-        prompt += '\n'
-
-        // 构建映射表
-        columnMap[friendlyName] = {
-          id: col.id,
-          component: col.component,
-          prop: col.props?.prop,
-          label: col.props?.label,
-          props: col.props,
-        }
-      })
-      componentMaps.tableColumns = columnMap
-      prompt += '\n'
-
-      // 添加表格列提示词
-      if (config.slotPrompts && config.slotPrompts.tableColumns) {
-        prompt += `**表格列提示词:**\n${config.slotPrompts.tableColumns}\n\n`
-        prompt += `**提示词中的组件引用映射:**\n`
-        Object.keys(columnMap).forEach(name => {
-          const comp = columnMap[name]
-          const shortId = comp.id ? comp.id.split('_').slice(-1)[0] : ''
-          prompt += `- @${name}${shortId ? '#' + shortId : ''} → ${comp.component} (id: ${comp.id}, prop: ${comp.prop || '无'})\n`
-        })
-        prompt += '\n'
-      }
-    }
+    })
 
     // 添加组件联动说明
     if (config.slotPrompts && Object.values(config.slotPrompts).some(p => p && p.trim())) {

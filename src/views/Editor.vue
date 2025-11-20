@@ -373,10 +373,7 @@ export default {
       return this.$store.state.editor
     },
     totalComponentCount() {
-      const searchCount = this.editorStore.slots.searchArea?.length || 0
-      const actionCount = this.editorStore.slots.actionArea?.length || 0
-      const tableCount = this.editorStore.slots.tableColumns?.length || 0
-      return searchCount + actionCount + tableCount
+      return this.$store.getters['editor/totalComponentCount']
     },
     canAnalyzeImage() {
       return !!this.imageBase64 && this.imageFileList.length > 0 && !this.imageLoading

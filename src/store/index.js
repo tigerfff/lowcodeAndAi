@@ -13,23 +13,16 @@ const defaultState = () => ({
     title: '',
     breadcrumb: [],
   },
-  slots: {
-    searchArea: [],
-    actionArea: [],
-    tableColumns: [],
-  },
-  slotPrompts: {
-    searchArea: '',
-    actionArea: '',
-    tableColumns: '',
-  },
+  slots: {}, // 动态，从模板初始化
+  slotMeta: {}, // 存储模板的 slot 元数据
+  slotPrompts: {}, // 动态，从模板初始化
   customComponents: [],
   apiConfigs: [],
   aiConfig: {
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     apiKey: '',
     model: 'qwen-max',
-    temperature: 0.2,
+    temperature: 0.6,
     maxTokens: 4000,
   },
   generatedCode: '',
@@ -92,14 +85,12 @@ function generateFriendlyName(slotName, componentName, label, model, index) {
   return `${typeName}${index + 1}`
 }
 
-function normalizeComponent(slotName, item, index) {
+function normalizeComponent(slotName, item, index, slotMeta = {}) {
   if (!item || typeof item !== 'object') return null
-  const defaultComponentMap = {
-    searchArea: 'el-input',
-    actionArea: 'el-button',
-    tableColumns: 'el-table-column',
-  }
-  const componentName = item.component || defaultComponentMap[slotName] || 'el-input'
+  // 从 slot 元数据获取默认组件，如果没有则使用传入的组件名或 el-input
+  const allowedComponents = slotMeta[slotName]?.allowedComponents || []
+  const defaultComponent = allowedComponents.length > 0 ? allowedComponents[0] : 'el-input'
+  const componentName = item.component || defaultComponent
   const id =
     item.id ||
     `${slotName}_${componentName}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`
@@ -134,9 +125,9 @@ function normalizeComponent(slotName, item, index) {
   return normalized
 }
 
-function normalizeSlotComponents(slotName, list) {
+function normalizeSlotComponents(slotName, list, slotMeta = {}) {
   if (!Array.isArray(list)) return []
-  return list.map((item, index) => normalizeComponent(slotName, item, index)).filter(Boolean)
+  return list.map((item, index) => normalizeComponent(slotName, item, index, slotMeta)).filter(Boolean)
 }
 
 const editorModule = {
@@ -175,6 +166,14 @@ const editorModule = {
     hasTableColumns(state) {
       return state.slots.tableColumns && state.slots.tableColumns.length > 0
     },
+    // 通用方法：获取总组件数
+    totalComponentCount(state) {
+      return Object.values(state.slots).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0)
+    },
+    // 通用方法：检查某个 slot 是否有组件
+    hasComponents: (state) => (slotName) => {
+      return state.slots[slotName] && state.slots[slotName].length > 0
+    },
   },
   mutations: {
     SET_CURRENT_STEP(state, value) {
@@ -191,6 +190,9 @@ const editorModule = {
     },
     SET_SLOTS(state, slots) {
       state.slots = slots
+    },
+    SET_SLOT_META(state, slotMeta) {
+      state.slotMeta = slotMeta || {}
     },
     SET_SLOT_PROMPT(state, { slotName, prompt }) {
       Vue.set(state.slotPrompts, slotName, prompt)
@@ -314,14 +316,21 @@ const editorModule = {
         }
       }
       if (template && template.slots) {
-        const slots = { ...defaultState().slots }
+        // 保存 slot 元数据
+        commit('SET_SLOT_META', template.slots)
+        
+        // 动态初始化所有 slots
+        const slots = {}
+        const slotPrompts = {}
         Object.keys(template.slots).forEach(key => {
           slots[key] = []
+          slotPrompts[key] = ''
         })
-        commit('SET_SLOTS', {
-          searchArea: slots.searchArea,
-          actionArea: slots.actionArea,
-          tableColumns: slots.tableColumns,
+        commit('SET_SLOTS', slots)
+        
+        // 初始化 slotPrompts
+        Object.entries(slotPrompts).forEach(([slotName, prompt]) => {
+          commit('SET_SLOT_PROMPT', { slotName, prompt })
         })
       }
     },
@@ -338,7 +347,7 @@ const editorModule = {
       const normalized =
         component && component.id
           ? component
-          : normalizeComponent(slotName, component, state.slots[slotName].length)
+          : normalizeComponent(slotName, component, state.slots[slotName].length, state.slotMeta)
       if (normalized) {
         commit('ADD_SLOT_COMPONENT', { slotName, component: normalized })
       }
@@ -552,20 +561,34 @@ const editorModule = {
         : []
       commit('SET_API_CONFIGS', mapped)
     },
-    applyComponentSuggestion({ commit, dispatch }, payload) {
+    applyComponentSuggestion({ state, commit, dispatch }, payload) {
       if (!payload || typeof payload !== 'object') return
       const source = payload.slots || payload
-      const nextSlots = {
-        searchArea: normalizeSlotComponents('searchArea', source.searchArea || source.search || []),
-        actionArea: normalizeSlotComponents(
-          'actionArea',
-          source.actionArea || source.actions || []
-        ),
-        tableColumns: normalizeSlotComponents(
-          'tableColumns',
-          source.tableColumns || source.columns || []
-        ),
-      }
+      
+      // 动态处理所有 slot，根据 slotMeta
+      const nextSlots = {}
+      const slotMeta = state.slotMeta || {}
+      
+      // 遍历当前模板定义的所有 slot
+      Object.keys(slotMeta).forEach(slotName => {
+        // 支持多种可能的字段名（如 search/searchArea, actions/actionArea, columns/tableColumns）
+        const possibleNames = [slotName]
+        if (slotName === 'searchArea') possibleNames.push('search')
+        if (slotName === 'actionArea') possibleNames.push('actions')
+        if (slotName === 'tableColumns') possibleNames.push('columns')
+        
+        // 找到对应的数据
+        let slotData = []
+        for (const name of possibleNames) {
+          if (Array.isArray(source[name])) {
+            slotData = source[name]
+            break
+          }
+        }
+        
+        nextSlots[slotName] = normalizeSlotComponents(slotName, slotData, slotMeta)
+      })
+      
       commit('SET_SLOTS', nextSlots)
 
       if (payload.pageInfo && typeof payload.pageInfo === 'object') {
