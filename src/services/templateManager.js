@@ -29,7 +29,7 @@ async function loadAllTemplates() {
           continue
         }
 
-        // 动态导入模板配置
+        // 动态导入模板配置 
         const module = await templateModules[path]()
         const config = module.default || module
 

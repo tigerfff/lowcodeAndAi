@@ -10,6 +10,32 @@
     "template": "page.vue.hbs",
     "description": "固定布局结构：容器 → 头部 → 内容（搜索区 + 操作区 + 表格 + 分页）"
   },
+  "layoutRules": [
+    {
+      "name": "compact",
+      "condition": {
+        "searchArea": { "min": 1, "max": 2 }
+      },
+      "description": "简洁布局：搜索项 ≤2 时使用",
+      "prompt": "\n### 🔴 重要布局规则（简洁布局）\n\n**当前搜索组件数量: {{searchAreaCount}} 个（≤ 2）**\n\n由于搜索项较少，使用**简洁布局**：\n\n**关键要求：**\n1. ❌ **不使用** `<h-page-search>` 组件\n2. ✅ **使用** `<h-page-action>` 组件，并使用具名插槽：\n   - `<template #leftAction>`: 放置**操作按钮**（来自 actionArea 配置）\n   - `<template #rightAction>`: 放置**搜索组件**（来自 searchArea 配置），搜索项可直接排列在这一插槽中\n3. 🚫 **禁止渲染“查询 / 重置”按钮**，因为搜索项较少时直接输入即可即时触发逻辑\n\n**代码结构示例：**\n```vue\n<h-page-action>\n  <!-- 左侧：操作按钮 -->\n  <template #leftAction>\n    <el-button type=\"primary\" @click=\"handleAdd\">添加</el-button>\n    <!-- 其他操作按钮... -->\n  </template>\n  \n  <!-- 右侧：搜索组件（无查询/重置按钮） -->\n  <template #rightAction>\n    <el-input v-model=\"filters.keyword\" placeholder=\"请输入关键字\" clearable style=\"width: 200px\" />\n    <el-select v-model=\"filters.status\" placeholder=\"请选择状态\" clearable>\n      <el-option label=\"启用\" value=\"1\" />\n      <el-option label=\"禁用\" value=\"0\" />\n    </el-select>\n  </template>\n</h-page-action>\n```\n\n**注意事项：**\n- 搜索组件内联显示，不需要 label（或使用 placeholder 代替）\n- 搜索项之间保持 8~12px 间距，确保紧凑\n- 不要附加查询、重置或其他额外按钮\n\n"
+    },
+    {
+      "name": "standard",
+      "condition": {
+        "searchArea": { "min": 3 }
+      },
+      "description": "标准布局：搜索项 > 2 时使用",
+      "prompt": "\n### 🔴 重要布局规则（标准布局）\n\n**当前搜索组件数量: {{searchAreaCount}} 个（> 2）**\n\n由于搜索项较多，使用**标准布局**：\n\n**关键要求：**\n1. ✅ **使用** `<h-page-search>` 组件：独立的搜索区域\n   - 包含所有搜索条件（来自 searchArea 配置）\n   - 使用 `<h-page-search-item>` 包裹每个搜索项，需要设置 label\n   - 在 `<template slot=\"pageSearchAction\">` 中放置查询、重置按钮\n   \n2. ✅ **使用** `<h-page-action>` 组件：独立的操作区域\n   - **不使用** slot 插槽，直接在默认插槽中放置操作按钮（来自 actionArea 配置）\n\n**代码结构示例：**\n```vue\n<!-- 搜索区 -->\n<h-page-search ref=\"filters\" :model=\"filters\">\n  <h-page-search-item label=\"用户名\">\n    <el-input v-model=\"filters.userName\" placeholder=\"请输入用户名\" clearable />\n  </h-page-search-item>\n  <h-page-search-item label=\"状态\">\n    <el-select v-model=\"filters.status\" placeholder=\"请选择状态\" clearable>\n      <el-option label=\"启用\" value=\"1\" />\n      <el-option label=\"禁用\" value=\"0\" />\n    </el-select>\n  </h-page-search-item>\n  \n  <template slot=\"pageSearchAction\">\n    <el-button type=\"primary\" @click=\"handleSearch\">查询</el-button>\n    <el-button @click=\"handleReset\">重置</el-button>\n  </template>\n</h-page-search>\n\n<!-- 操作区 -->\n<h-page-action>\n  <el-button type=\"primary\" @click=\"handleAdd\">添加</el-button>\n  <el-button @click=\"handleExport\">导出</el-button>\n  <!-- 其他操作按钮... -->\n</h-page-action>\n```\n\n"
+    },
+    {
+      "name": "noSearch",
+      "condition": {
+        "searchArea": { "min": 0, "max": 0 }
+      },
+      "description": "无搜索区布局",
+      "prompt": "\n### 🔴 重要布局规则（无搜索区）\n\n**当前搜索组件数量: 0 个**\n\n**关键要求：**\n1. ❌ **不使用** `<h-page-search>` 组件\n2. ✅ **使用** `<h-page-action>` 组件：\n   - 直接在默认插槽中放置操作按钮（来自 actionArea 配置）\n\n"
+    }
+  ],
   "slots": {
     "searchArea": {
       "label": "搜索区",

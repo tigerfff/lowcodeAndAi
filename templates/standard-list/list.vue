@@ -36,6 +36,23 @@
             <el-button @click="reset">重置</el-button>
           </template>
         </h-page-search>
+
+        <h-page-action>
+          <template #leftAction>
+            <el-button type="primary" @click="search">添加</el-button>
+          </template>
+          <template #rightAction>
+            <el-select v-model="filters.select" placeholder="请选择">
+              <el-option
+                v-for="item in selectOpt"
+                :key="item.value" 
+                :value="item.value"
+                :label="item.label"
+              >
+              </el-option>
+            </el-select>
+          </template>
+        </h-page-action>
   
         <!-- 表格 -->
         <h-page-table>

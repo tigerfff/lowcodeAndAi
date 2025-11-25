@@ -220,6 +220,32 @@ async function generateWithTemplate(config, template) {
 }
 
 /**
+ * 匹配布局规则条件
+ * @param {Object} condition - 规则条件
+ * @param {Object} config - 页面配置
+ * @returns {boolean} 是否匹配
+ */
+function matchLayoutRule(condition, config) {
+  if (!condition) return true
+
+  // 遍历条件中的所有 slot
+  for (const [slotName, range] of Object.entries(condition)) {
+    const slotComponents = config.slots?.[slotName] || []
+    const count = Array.isArray(slotComponents) ? slotComponents.length : 0
+
+    // 检查是否满足 min 和 max 条件
+    if (range.min !== undefined && count < range.min) {
+      return false
+    }
+    if (range.max !== undefined && count > range.max) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
  * 构建 AI Prompt
  * @param {Object} config - 页面配置
  * @param {Object} template - 模板定义
@@ -261,12 +287,29 @@ async function buildAIPrompt(config, template) {
 ## 二、模板说明
 ${template.description || ''}
 
-模板布局结构：
+`
+
+  // 动态应用布局规则（从 template.json 中读取）
+  if (template.layoutRules && Array.isArray(template.layoutRules)) {
+    const searchAreaCount = config.slots?.searchArea?.length || 0
+
+    // 遍历规则，找到匹配的规则
+    for (const rule of template.layoutRules) {
+      if (matchLayoutRule(rule.condition, config)) {
+        // 替换模板变量（如 {{searchAreaCount}}）
+        let rulePrompt = rule.prompt.replace(/\{\{searchAreaCount\}\}/g, searchAreaCount)
+        prompt += rulePrompt
+        break
+      }
+    }
+  }
+
+  prompt += `
+模板基础布局结构：
 - h-page-container: 页面容器
   - h-page-header: 页面头部（面包屑）
   - h-page-content: 页面内容
-    - h-page-search: 搜索区（可选）
-    - h-page-action: 操作区（可选）
+    - h-page-search / h-page-action: 搜索/操作区（根据上述规则选择）
     - h-page-table: 表格区（包含分页）
 `
 
